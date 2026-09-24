@@ -1,0 +1,20 @@
+[project]
+name = "etl-dq"
+version = "0.1.0"
+description = "ETL pipeline for Data Quality"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apache-airflow==3.3.0",
+    "apache-airflow-providers-celery>=3.24.0",
+    "apache-airflow-providers-fab>=3.9.0",
+    "asyncpg>=0.31.0",
+    "polars>=1.44.2",
+    "psycopg2",
+    "pyarrow>=25.0.1",
+    "pymysql>=1.2.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
