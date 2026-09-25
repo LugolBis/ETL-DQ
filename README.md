@@ -1,5 +1,12 @@
 # ETL_DQ
 
+This project focuses on designing and implementing an **ETL pipeline dedicated to data quality assessment within a Mediation System (MS)**. Its main objective is to define and implement data quality metrics that can be used to identify anomalies, monitor data reliability, and provide measurable insights into the quality of the data processed by the system.
+
+The project is built using **Python**, with **Apache Airflow** for workflow orchestration and scheduling, and **Polars** for high-performance data processing and transformation. Together, these technologies provide a modular and scalable foundation for automating data quality checks throughout the ETL pipeline.
+
+## Documentation
+You can read the [French documentation](./Documentation.md) to track our progress.
+
 ## Getting started
 
 ### Prerequisites
