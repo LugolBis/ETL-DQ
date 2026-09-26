@@ -124,8 +124,34 @@ Métriques :
     - `Source1.Population.Code_Postal`
     - `Source2.Population.Code_Postal`
     - `Source4.IRIS.ID_Ville`
+  Exemple :
+    `Source3.CSP.ID_CSP` &#8838; {
+      "agriculteurs exploitants",
+      "artisans, commerçants et chefs d’entreprise",
+      "cadres et professions intellectuelles supérieures",
+      "professions intermédiaires",
+      "employés",
+      "ouvriers",
+      "retraités",
+      "autres personnes sans activité professionnelle",
+    }
 
-    Exemple : `Source1.Population.CSP` doit appartenir à l'ensemble des `ID_CSP` définis dans `Source3.CSP`, sinon la donnée serait invalide.
+- Validité d'intervalles de données :
+
+  &forall; _t_ &#8712; _T_, on a _y_ <= _t[x]_ <= _z_ :
+    - Tel que &forall; _t_ &#8712; `Source3.CSP` vérifie _t[Salaire\_Min]_ <= _t[Salaire\_Moyen]_ <= _t[Salaire\_Max]_
+
+  L'idée est d'avoir une métrique flexible permetant de définir _y_ et _z_ statiquement u dynamiquement.
+
+- Validité des formats extra sources :
+
+  Vérification de la validité des clés étrangères :
+    - set(`Source1.Population.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
+    - set(`Source2.Population.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
+    - set(`Source1.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
+    - set(`Source2.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
+
+  Exemple : `Source1.Population.CSP` doit appartenir à l'ensemble des `ID_CSP` définis dans `Source3.CSP`, sinon la donnée serait invalide.
 
 #### Hétérogénéité des échelles
 
@@ -168,7 +194,9 @@ L'**Unicité** mesure la redondance d'une base de données.
 - Doublons extra sources :
 
   Détection de doublons générés par la jointure de deux sources :
-  - &forall; _x_ &#8712; (`Source1.Population` &#8746; `Source2.Population`), _x_ est unique. (L'inverse pourrait être observable si quelqu'un déménage).
+  - &forall; _x_ &#8712; (`Source1.Population` &#8746; `Source2.Population`), _x_ est unique.
+
+  Exemple : Dans (`Source1.Population` &#8746; `Source2.Population`), si deux lignes partagent le même `(Nom, Prénom)` avec une adresse différente : doublon. Il pourrait ici s'agir de quelqu'un qui à déménagé.
   
 
 - Doublons intra sources :
