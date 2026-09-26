@@ -182,11 +182,10 @@ L'**Unicité** mesure la redondance d'une base de données.
     - `Source3.CSP.(Salaire_Min, Salaire_Max)`
     - `Source4.IRIS.ID_Iris`
 
-<<<<<<< HEAD
     Exemple : Dans `Source.Consommation`, si deux lignes partagent le même `(N, Nom_Rue, Code_Postal)` avec des `NB_KW_Jour` différents : doublon.
 
     → Hypothèse: Une adresse représente un et un seul logement.
-=======
+
 #### Cohérence
 
 La **Cohérence** mesure la validité des relations entre les données.
@@ -350,4 +349,3 @@ La **Cohérence** mesure la validité des relations entre les données.
 	> Problèmes ouverts :
 	> - Comment gérer les valeurs `Null` ?!
 	> - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
->>>>>>> 0a3878b (Add Cohérence metric in the Documentation)
