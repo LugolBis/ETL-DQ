@@ -182,6 +182,172 @@ L'**Unicité** mesure la redondance d'une base de données.
     - `Source3.CSP.(Salaire_Min, Salaire_Max)`
     - `Source4.IRIS.ID_Iris`
 
+<<<<<<< HEAD
     Exemple : Dans `Source.Consommation`, si deux lignes partagent le même `(N, Nom_Rue, Code_Postal)` avec des `NB_KW_Jour` différents : doublon.
 
     → Hypothèse: Une adresse représente un et un seul logement.
+=======
+#### Cohérence
+
+La **Cohérence** mesure la validité des relations entre les données.
+
+- Distribution groupée des colonnes :
+
+	L'intuition est la suivante : on analyse la distribution des données de toutes les colonnes, lorsque celles-ci sont groupées selon une autre colonne de la même relation _R_.
+
+	Algorithme ***FilterRel*** :
+    ```python
+    def FilterRel(R: Relation) -> Relation:
+        pk_cols = SELECT column_name
+                FROM R.get_columns()
+                WHERE (
+                    SELECT COUNT(DISTINCT column_name)
+                    FROM R
+                ) = (
+                    SELECT COUNT(column_name)
+                    FROM R
+                );
+        # We exclude the `pk_cols` using difference between sets
+        target_cols = R.get_columns() \ pk_cols
+        return SELECT target_cols FROM R;
+    ```
+
+	**SIMILARITY & DISTANCE**
+
+	Algorithme ***ComputeDissimilarityMatrix*** :
+    ```python
+    def ComputeDissimilarityMatrix(labels: list[str]) -> list[list[float]]:
+        N = labels.len()
+        D = numpy.zeros((N, N)) # Init a matrix N x N filled with zeros
+
+        for idx_row in range(0, N-1):
+            for idx_col in range(i+1, N-1):
+                # We compute the distance using Levenshtein edit distance
+                distance ← distance_levenshtein(labels[idx_row], labels[idx_col])
+                word_len = max(labels[i].len(), labels[j].len())
+                distance_normalized = distance / word_len if word_len > 0 else 0.0
+
+                D[i][j] ← distance_normalized
+                D[j][i] ← distance_normalized # symetric matrix
+        return D
+    ```
+
+	Algorithme ***MultimodalDistance*** :
+  	```python
+  	def MultimodalDistance(a: Any, b: Any) -> float:
+  	    if isinstance(a, numpy.ndarray) and isinstance(b, numpy.ndarray):
+  	        return numpyp.linalg.norm(a - b)
+  	    return abs(a - b)
+  	```
+
+	**ENCODING**
+
+	Algorithme ***EncodeProjRel*** :
+    ```python
+    def EncodeProjRel(R: Relation) -> Relation:
+        str_cols = SELECT column_name
+                FROM R.get_columns()
+                WHERE column_type LIKE 'varchar%';
+
+        # We encode string columns as 2D float array
+        for col_name in str_cols:
+            labels = SELECT DISTINCT col_name FROM R;
+
+    	    # We compute the dissimilarity matrix
+    	    D = ComputeDissimilarityMatrix(labels)
+
+            # Finally we encode the labels (generate embeddings) using t-SNE algorithm
+            tsne = sklearn.manifold.TSNE(
+                n_components=2, perplexity=int(labels.len()*0.5),
+                metric="precomputed", init="random", random_state=42,
+            )
+            embeddings = tsne.fit_transform(D)
+	
+    	    # /!\ WARNING : After this operation R isn't anymore in 1FN
+    	    R.set_column(col_name, embeddings)
+
+    	return R
+    ```
+
+	Algorithme ***EncodeNumRel*** :
+    ```python
+    def EncodeNumRel(R: Relation) -> Relation:
+        bool_cols = SELECT column_name
+                    FROM R.get_columns()
+                    WHERE column_type = 'boolean';
+        
+        for col_name in bool_cols:
+            values = SELECT
+                        CASE WHEN col_name = true THEN 1
+                        ELSE 0 END AS col_name
+                     FROM R;
+            R.set_column(col_name, values)
+
+        date_cols = SELECT column_name
+                    FROM R.get_columns()
+                    WHERE column_type = 'date';
+
+        for col_name in bool_cols:
+            values = SELECT CAST(col_name, INTEGER) AS col_name
+                     FROM R;
+            R.set_column(col_name, values)        
+        return R
+    ```
+  
+  **STATISTICS**
+
+  Algorithme ***ComputeGroupStats*** :
+  ```python
+  def compute_group_stats(X_values) -> tuple[float, float]:
+	"""Return : mean, variance"""
+	if isinstance(X_values[0], numpy.ndarray):
+		mu = np.mean(arr, axis=0)  # Centroïde [mean_x, mean_y]
+        var = np.var(arr[:, 0]) + np.var(arr[:, 1])  # Variance spatiale
+        return mu, var
+	else:
+		mu = numpy.mean(X_values)
+        var = numpy.var(X_values)
+        return mu, var 
+  ```
+
+  Algorithme ***AnalyzeGroupedDistribution*** :
+    ```python
+    def AnalyzeGroupedDistribution(R: Relation) -> ???:
+        R_filtered = FilterRel(R)
+        R_encoded = EncodeProjRel(EncodeNumRel(R_filtered))
+
+		N = SELECT COUNT(*) FROM R_encoded;
+		epsilon = 10e-12
+
+        for x in R_encoded.get_columns():
+            global_vals = SELECT x FROM R_encoded;
+            global_mu, global_var = compute_group_stats(global_vals)
+
+            for y in R_encoded.get_columns()\{x}:
+                x_groups = SELECT x FROM R_encoded GROUP BY y;
+				
+				var_intra = 0.0
+            	max_group_var = 0.0
+            	M3 = 0.0
+
+				for group in x_groups:
+					Ng = group.len()
+					group_mu, group_var = compute_group_stats(group)
+
+					var_intra += (Ng / N) * group_var
+					max_group_var = max(max_group_var, group_var)
+					dist = MultimodalDistance(group_mu, global_mu)
+					M3 = max(M3, sqrt(Ng) * dist)
+				
+				M1 = (global_var - var_intra) / (global_var + epsilon)
+				M2 = max_group_var / (var_intra + epsilon)
+				matrix_results[x][y] = [M1, M2, M3]
+		
+		return matrix_results
+    ```
+
+	> [!WARNING]
+	> Problèmes ouverts :
+	> - Comment gérer les valeurs `Null` ?!
+	> - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
+>>>>>>> 0a3878b (Add Cohérence metric in the Documentation)
