@@ -162,7 +162,7 @@ L'**Unicité** mesure la redondance d'une base de données.
 - Doublons extra sources :
 
   Détection de doublons générés par la jointure de deux sources :
-  - &forall; _x_ dans `Source1.Population` &#8746; `Source`, _x_ est unique. (L'inverse pourrait être observable si quelqu'un déménage).
+  - &forall; _x_ dans (`Source1.Population` &#8746; `Source2.Population`), _x_ est unique. (L'inverse pourrait être observable si quelqu'un déménage).
 - Doublons intra sources :
 
   Détection de doublons partiel (à partir d'un sous ensemble d'attributs) :
