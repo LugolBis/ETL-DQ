@@ -13,7 +13,6 @@ You can read the [French documentation](./Documentation.md) to track our progres
 
 - Docker & the Docker Compose plugin
 - Git
-- A Kaggle account with an API token
 
 ### Installation
 
