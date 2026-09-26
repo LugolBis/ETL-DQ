@@ -345,7 +345,7 @@ La **Cohérence** mesure la validité des relations entre les données.
 		return matrix_results
     ```
 
-	> [!WARNING]
-	> Problèmes ouverts :
-	> - Comment gérer les valeurs `Null` ?!
-	> - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
+> [!WARNING]
+> Problèmes ouverts :
+> - Comment gérer les valeurs `Null` ?!
+> - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
