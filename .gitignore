@@ -1,0 +1,6 @@
+.env
+airflow/
+.airflow/
+__pycache__/
+*.pyc
+.DS_Store

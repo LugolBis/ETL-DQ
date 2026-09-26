@@ -5,7 +5,7 @@ This project focuses on designing and implementing an **ETL pipeline dedicated t
 The project is built using **Python**, with **Apache Airflow** for workflow orchestration and scheduling, and **Polars** for high-performance data processing and transformation. Together, these technologies provide a modular and scalable foundation for automating data quality checks throughout the ETL pipeline.
 
 ## Documentation
-You can read the [French documentation](./Documentation.md) to track our progress.
+You can read the [French documentation](./docs/Documentation.md) to track our progress.
 
 ## Getting started
 
