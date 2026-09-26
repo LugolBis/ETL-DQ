@@ -112,6 +112,9 @@ Métriques :
     - `Source1.Consommation.Nom_Rue`
     - `Source2.Consommation.Nom_Rue`
     - `Source4.IRIS.ID_Rue`
+
+    Exemple : `Source1.Population.Adresse` = '12' est invalide.
+
 - Ensemble fini de données (labels) :
 
   Évaluation de l'appartenance de l'ensemble des données _X_ à un ensemble prédéfinis de labels _Y_ :
@@ -121,6 +124,8 @@ Métriques :
     - `Source1.Population.Code_Postal`
     - `Source2.Population.Code_Postal`
     - `Source4.IRIS.ID_Ville`
+
+    Exemple : `Source1.Population.CSP` doit appartenir à l'ensemble des `ID_CSP` définis dans `Source3.CSP`, sinon la donnée serait invalide.
 
 #### Hétérogénéité des échelles
 
@@ -151,6 +156,7 @@ Métriques :
   - `Source2.Population.CSP`
   - `Source3.CSP.Salaire_Moyen`
 
+    Exemple : Par exemple, sur 10 000 lignes de `Source1.Consommation`, si 200 ont `NB_KW_Jour` manquant alors le taux de complétude est de 98%.
 > [!CAUTION]
 > **TODO** : Ajouter les attributs non clé utilisés pour faire les jointures entre sources (pour former les tables de _MS_)
 >
@@ -163,6 +169,8 @@ L'**Unicité** mesure la redondance d'une base de données.
 
   Détection de doublons générés par la jointure de deux sources :
   - &forall; _x_ &#8712; (`Source1.Population` &#8746; `Source2.Population`), _x_ est unique. (L'inverse pourrait être observable si quelqu'un déménage).
+  
+
 - Doublons intra sources :
 
   Détection de doublons partiel (à partir d'un sous ensemble d'attributs) :
@@ -173,3 +181,7 @@ L'**Unicité** mesure la redondance d'une base de données.
     - `Source3.CSP.Salaire_Moyen`
     - `Source3.CSP.(Salaire_Min, Salaire_Max)`
     - `Source4.IRIS.ID_Iris`
+
+    Exemple : Dans `Source.Consommation`, si deux lignes partagent le même `(N, Nom_Rue, Code_Postal)` avec des `NB_KW_Jour` différents : doublon.
+
+    → Hypothèse: Une adresse représente un et un seul logement.
