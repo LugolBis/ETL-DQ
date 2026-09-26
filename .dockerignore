@@ -1,0 +1,9 @@
+src/tests/
+*/__pycache__/
+.venv
+*.pyc
+*.pyo
+*.pyd
+.git
+.dockerignore
+Dockerfile
