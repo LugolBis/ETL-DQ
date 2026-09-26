@@ -159,14 +159,14 @@ L'**Hétérogénéité des échelles** mesure la dissimilarité des unités/éch
 
 Métriques :
 
-- Validité statistique extra ensembliste :
+- Différence de dispersion relative - inter-sources :
+  _d\_CV_ = |_ln_(_CV\_Y_ / _CV\_X_)| avec _CV_ = _&sigma;_/|_&mu;_|. Seuil _d\_CV_ doit être <= _ln_(5)
+    - _X_ = `Source1.Consommation.NB_KW_Jour` et _Y_ = `Source2.Consommation.NB_KW_Jour`
 
-  Évaluation de la cohérence statistique des données (extremum, moyenne, médiane, écart type, etc.) entre deux ensembles _X_ et _Y_ :
-    - (`Source1.Consommation.NB_KW_Jour`, `Source2.Consommation.NB_KW_Jour`)
-- Validité statistique intra ensembliste :
-
-  Évaluation de la cohérence statistique des données (extremum, moyenne, médiane, écart type, etc.) entre les différentes dimensions _D_ d'un même ensemble de données _X_ :
-    - _D_ = {Salaire_moyen, Salaire_Min, Salaire_Max} pour _X_ = `Source3.CSP` (groupé selon `ID_CSP`)
+- Ratio de position (RP) - intra-source :
+  Soit (_x_, _y_, _z_) un triplet de colonnes de la relation _R_, tel qu'on suppose _x_ <= _y_ <= _z_ et _x_ < _z_ &forall; _t_ &in; _R_.
+  On a _RP_ = $\frac{1}{R} \sum_{\forall t \in R}1 [\frac{(t[y] − t[x])}{(t[z] − t[x])} \notin [\epsilon, 1-\epsilon]]$ :
+    - _R_ = `Source3.CSP`, (_x_, _y_, _z_) = (`Salaire_Min`, `Salaire_Moyen`, `Salaire_Max`) et $\epsilon = 0.1$
 
 #### Complétude des données
 
