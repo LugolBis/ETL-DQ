@@ -248,14 +248,14 @@ La **Cohérence** mesure la validité des relations entre les données.
         D = numpy.zeros((N, N)) # Init a matrix N x N filled with zeros
 
         for idx_row in range(0, N-1):
-            for idx_col in range(i+1, N-1):
+            for idx_col in range(idx_row+1, N):
                 # We compute the distance using Levenshtein edit distance
                 distance ← distance_levenshtein(labels[idx_row], labels[idx_col])
-                word_len = max(labels[i].len(), labels[j].len())
+                word_len = max(labels[idx_row].len(), labels[idx_col].len())
                 distance_normalized = distance / word_len if word_len > 0 else 0.0
 
-                D[i][j] ← distance_normalized
-                D[j][i] ← distance_normalized # symetric matrix
+                D[idx_row][idx_col] ← distance_normalized
+                D[idx_col][idx_row] ← distance_normalized # symetric matrix
         return D
     ```
 
