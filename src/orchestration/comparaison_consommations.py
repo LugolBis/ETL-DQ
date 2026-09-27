@@ -1,5 +1,6 @@
 
 from pathlib import Path
+import math
 
 import polars as pl
 
@@ -23,6 +24,32 @@ def compter_valeurs_atypiques(df: pl.DataFrame) -> int:
     ).height
 
 
+def calculer_cv(df: pl.DataFrame) -> float:
+    stats = calculer_statistiques(df).row(0, named=True)
+
+    moyenne = stats["moyenne"]
+    ecart_type = stats["ecart_type"]
+
+    if moyenne is None or ecart_type is None or moyenne == 0:
+        raise ValueError(
+            "Impossible de calculer le coefficient de variation"
+        )
+
+    return ecart_type / abs(moyenne)
+
+
+def calculer_difference_dispersion(
+    cv_paris: float,
+    cv_evry: float,
+) -> float:
+    if cv_paris <= 0 or cv_evry <= 0:
+        raise ValueError(
+            "Les coefficients de variation doivent être positifs"
+        )
+
+    return abs(math.log(cv_evry / cv_paris))
+
+
 def comparer_consommations() -> None:
     dossier = Path("/opt/airflow/.data")
 
@@ -38,12 +65,14 @@ def comparer_consommations() -> None:
         has_header=True,
     ).read()
 
+    # 1. Statistiques descriptives
     stats_paris = calculer_statistiques(paris).row(0, named=True)
     stats_evry = calculer_statistiques(evry).row(0, named=True)
 
     print(f"STATISTIQUES PARIS : {stats_paris}", flush=True)
     print(f"STATISTIQUES EVRY : {stats_evry}", flush=True)
 
+    # 2. Valeurs atypiques
     print(
         "VALEURS ATYPIQUES PARIS :",
         compter_valeurs_atypiques(paris),
@@ -55,6 +84,25 @@ def comparer_consommations() -> None:
         compter_valeurs_atypiques(evry),
         flush=True,
     )
+
+    # 3. Coefficients de variation
+    cv_paris = calculer_cv(paris)
+    cv_evry = calculer_cv(evry)
+
+    print(f"CV PARIS : {cv_paris:.4f}", flush=True)
+    print(f"CV EVRY : {cv_evry:.4f}", flush=True)
+
+    # 4. Différence de dispersion entre les sources
+    d_cv = calculer_difference_dispersion(cv_paris, cv_evry)
+    seuil = math.log(5)
+
+    print(f"DIFFERENCE DE DISPERSION : {d_cv:.4f}", flush=True)
+    print(f"SEUIL : {seuil:.4f}", flush=True)
+
+    if d_cv <= seuil:
+        print("HETEROGENEITE : seuil respecte", flush=True)
+    else:
+        print("HETEROGENEITE : seuil depasse", flush=True)
 
 
 if __name__ == "__main__":
