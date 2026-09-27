@@ -263,7 +263,7 @@ La **Cohérence** mesure la validité des relations entre les données.
   	```python
   	def MultimodalDistance(a: Any, b: Any) -> float:
   	    if isinstance(a, numpy.ndarray) and isinstance(b, numpy.ndarray):
-  	        return numpyp.linalg.norm(a - b)
+  	        return numpy.linalg.norm(a - b)
   	    return abs(a - b)
   	```
 
@@ -314,7 +314,7 @@ La **Cohérence** mesure la validité des relations entre les données.
                     FROM R.get_columns()
                     WHERE column_type = 'date';
 
-        for col_name in bool_cols:
+        for col_name in date_cols:
             values = SELECT CAST(col_name, INTEGER) AS col_name
                      FROM R;
             R.set_column(col_name, values)        
@@ -328,11 +328,11 @@ La **Cohérence** mesure la validité des relations entre les données.
   def compute_group_stats(X_values) -> tuple[float, float]:
 	"""Return : mean, variance"""
 	if isinstance(X_values[0], numpy.ndarray):
-		mu = np.mean(arr, axis=0)  # Centroïde [mean_x, mean_y]
+	    mu = np.mean(arr, axis=0)  # Centroïde [mean_x, mean_y]
         var = np.var(arr[:, 0]) + np.var(arr[:, 1])  # Variance spatiale
         return mu, var
 	else:
-		mu = numpy.mean(X_values)
+	    mu = numpy.mean(X_values)
         var = numpy.var(X_values)
         return mu, var 
   ```
