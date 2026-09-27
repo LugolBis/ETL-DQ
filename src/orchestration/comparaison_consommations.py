@@ -50,6 +50,25 @@ def calculer_difference_dispersion(
     return abs(math.log(cv_evry / cv_paris))
 
 
+# 5. Nouvelle métrique : complétude des données
+def calculer_completude(df: pl.DataFrame) -> float:
+    nombre_cellules = df.height * df.width
+
+    if nombre_cellules == 0:
+        raise ValueError(
+            "Impossible de calculer la complétude d'un tableau vide"
+        )
+
+    valeurs_manquantes = sum(df.null_count().row(0))
+
+    completude = (
+        (nombre_cellules - valeurs_manquantes)
+        / nombre_cellules
+    ) * 100
+
+    return completude
+
+
 def comparer_consommations() -> None:
     dossier = Path("/opt/airflow/.data")
 
@@ -103,6 +122,19 @@ def comparer_consommations() -> None:
         print("HETEROGENEITE : seuil respecte", flush=True)
     else:
         print("HETEROGENEITE : seuil depasse", flush=True)
+
+    # 5. Complétude des données
+    completude_paris = calculer_completude(paris)
+    completude_evry = calculer_completude(evry)
+
+    print(
+        f"COMPLETUDE PARIS : {completude_paris:.2f} %",
+        flush=True,
+    )
+    print(
+        f"COMPLETUDE EVRY : {completude_evry:.2f} %",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":
