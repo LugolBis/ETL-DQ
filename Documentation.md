@@ -41,21 +41,28 @@ Salaire_Moyen)")]
 
 #### Consommation_IRIS_Paris
 
-$R_1 = Source1.Consommation \Join_{\verb|Nom_Rue| = \verb|ID_Rue| \land \verb|Code_Postal| = \verb|ID_Ville|} Source4.IRIS$
+$R_1 = Source1.Consommation \Join_{\verb|C.Nom_Rue| = \verb|I.ID_Rue| \land \verb|C.Code_Postal| = \verb|I.ID_Ville|} Source4.IRIS$
 
 $\verb|Consommation_IRIS_Paris| = \rho_{\verb|ID_Iris| \to \verb|ID_IRIS|} \big(\gamma_{\verb|ID_Iris| ; AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_1)\big)$
 
 #### Consommation_IRIS_Evry
 
-$R_2 = Source2.Consommation \Join_{\verb|Nom_Rue| = \verb|ID_Rue| \land \verb|Code_Postal| = \verb|ID_Ville|} Source4.IRIS$
+$R_2 = Source2.Consommation \Join_{\verb|C.Nom_Rue| = \verb|I.ID_Rue| \land \verb|C.Code_Postal| = \verb|I.ID_Ville|} Source4.IRIS$
 
 $\verb|Consommation_IRIS_Evry| = \rho_{\verb|ID_Iris| \to \verb|ID_IRIS|} \big(\gamma_{\verb|ID_Iris| ; AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_2)\big)$
 
 #### Consommation_CSP
 
-$R_3 = \big(Source1.Population \Join_{\verb|Adresse| = \verb|ID_Adr|} Source1.Consommation\big) \cup \big(Source2.Population \Join_{\verb|Adresse| = \verb|ID_Adr|} Source2.Consommation\big)$
+$R_3 = \big(Source1.Population \Join_{\verb|P1.Adresse| = \verb|C1.ID_Adr|} Source1.Consommation\big) \cup \big(Source2.Population \Join_{\verb|P2.Adresse| = \verb|C2.ID_Adr|} Source2.Consommation\big)$
 
-$R_4 = R_3 \Join_{\verb|CSP| = \verb|ID_CSP|} Source3.CSP$
+où :
+- `P1` = `Source1.Population`
+- `C1` = `Source1.Consommation`
+- `P2` = `Source2.Population`
+- `C2` = `Source2.Consommation`
+
+
+$R_4 = R_3 \Join_{\verb|R3.CSP| = \verb|C.ID_CSP|} Source3.CSP$
 
 $\verb|Consommation_CSP| = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_4)$
 
