@@ -37,6 +37,38 @@ Salaire_Moyen)")]
     DB4 --> MSDB
 ```
 
+### Mapping
+
+#### Consommation_IRIS_Paris
+
+$R_1 = Source1.Consommation \;⋈_{Nom\_Rue = ID\_Rue \;\land\; Code\_Postal = ID\_Ville}\; Source4.IRIS$
+
+$Consommation\_IRIS\_Paris = \rho_{ID\_Iris \to ID\_IRIS}\;\big(\gamma_{ID\_Iris;\; AVG(NB\_KW\_Jour \times 365) \to Conso\_moyenne\_annuelle}(R_1)\big)$
+
+#### Consommation_IRIS_Evry
+
+$R_2 = Source2.Consommation \;⋈_{Nom\_Rue = ID\_Rue \;\land\; Code\_Postal = ID\_Ville}\; Source4.IRIS$
+
+$Consommation\_IRIS\_Evry = \rho_{ID\_Iris \to ID\_IRIS}\;\big(\gamma_{ID\_Iris;\; AVG(NB\_KW\_Jour \times 365) \to Conso\_moyenne\_annuelle}(R_2)\big)$
+
+#### Consommation_CSP
+
+$R_3 = \big(Source1.Population ⋈_{Adresse = ID\_Adr} Source1.Consommation\big) \;\cup\; \big(Source2.Population ⋈_{Adresse = ID\_Adr} Source2.Consommation\big)$
+
+$R_4 = R_3 \;⋈_{CSP = ID\_CSP}\; Source3.CSP$
+
+$Consommation\_CSP = \gamma_{ID\_CSP,\, Salaire\_Moyen;\; AVG(NB\_KW\_Jour \times 365) \to Conso\_moyenne\_annuelle}(R_4)$
+
+### Hypothèses de clés étrangères
+
+| SourceA.Colonne | SourceB.Colonne |
+|---|---|
+| Source1.Population.Adresse | Source1.Consommation.ID_Adr |
+| Source2.Population.Adresse | Source2.Consommation.ID_Adr |
+| Source1.Population.CSP<br>Source2.Population.CSP | Source3.CSP.ID_CSP |
+| Source1.Consommation.Nom_Rue<br>Source2.Consommation.Nom_Rue | Source4.IRIS.ID_Rue |
+| Source1.Consommation.Code_Postal<br>Source2.Consommation.Code_Postal | Source4.IRIS.ID_Ville |
+
 ### Requêtes
 
 - **Consommation_IRIS_Paris** (Source1 &#10781; Source4) :
