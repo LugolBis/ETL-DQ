@@ -164,7 +164,7 @@ Métriques :
     - _X_ = `Source1.Consommation.NB_KW_Jour` et _Y_ = `Source2.Consommation.NB_KW_Jour`
 
 - Ratio de position (RP) - intra-source :
-  Soit (_x_, _y_, _z_) un triplet de colonnes de la relation _R_, tel qu'on suppose _x_ <= _y_ <= _z_ et _x_ < _z_ &forall; _t_ &in; _R_.
+  Soit (_x_, _y_, _z_) un triplet de colonnes de la relation _R_, tel qu'on suppose que &forall; _t_ &in; _R_ _t[x]_ <= _t[y]_ <= _t[z]_ et _t[x]_ < _t[z]_ .
   On a _RP_ = $\frac{1}{R} \sum_{\forall t \in R}1 [\frac{(t[y] − t[x])}{(t[z] − t[x])} \notin [\epsilon, 1-\epsilon]]$ :
     - _R_ = `Source3.CSP`, (_x_, _y_, _z_) = (`Salaire_Min`, `Salaire_Moyen`, `Salaire_Max`) et $\epsilon = 0.1$
 
