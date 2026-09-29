@@ -41,23 +41,23 @@ Salaire_Moyen)")]
 
 #### Consommation_IRIS_Paris
 
-$R_1 = Source1.Consommation \;⋈_{Nom\_Rue = ID\_Rue \;\land\; Code\_Postal = ID\_Ville}\; Source4.IRIS$
+$R_1 = Source1.Consommation \Join_{\verb|Nom_Rue| = \verb|ID_Rue| \land \verb|Code_Postal| = \verb|ID_Ville|} Source4.IRIS$
 
-$Consommation\_IRIS\_Paris = \rho_{ID\_Iris \to ID\_IRIS}\;\big(\gamma_{ID\_Iris;\; AVG(NB\_KW\_Jour \times 365) \to Conso\_moyenne\_annuelle}(R_1)\big)$
+$\verb|Consommation_IRIS_Paris| = \rho_{\verb|ID_Iris| \to \verb|ID_IRIS|} \big(\gamma_{\verb|ID_Iris| ; AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_1)\big)$
 
 #### Consommation_IRIS_Evry
 
-$R_2 = Source2.Consommation \;⋈_{Nom\_Rue = ID\_Rue \;\land\; Code\_Postal = ID\_Ville}\; Source4.IRIS$
+$R_2 = Source2.Consommation \Join_{\verb|Nom_Rue| = \verb|ID_Rue| \land \verb|Code_Postal| = \verb|ID_Ville|} Source4.IRIS$
 
-$Consommation\_IRIS\_Evry = \rho_{ID\_Iris \to ID\_IRIS}\;\big(\gamma_{ID\_Iris;\; AVG(NB\_KW\_Jour \times 365) \to Conso\_moyenne\_annuelle}(R_2)\big)$
+$\verb|Consommation_IRIS_Evry| = \rho_{\verb|ID_Iris| \to \verb|ID_IRIS|} \big(\gamma_{\verb|ID_Iris| ; AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_2)\big)$
 
 #### Consommation_CSP
 
-$R_3 = \big(Source1.Population ⋈_{Adresse = ID\_Adr} Source1.Consommation\big) \;\cup\; \big(Source2.Population ⋈_{Adresse = ID\_Adr} Source2.Consommation\big)$
+$R_3 = \big(Source1.Population \Join_{\verb|Adresse| = \verb|ID_Adr|} Source1.Consommation\big) \cup \big(Source2.Population \Join_{\verb|Adresse| = \verb|ID_Adr|} Source2.Consommation\big)$
 
-$R_4 = R_3 \;⋈_{CSP = ID\_CSP}\; Source3.CSP$
+$R_4 = R_3 \Join_{\verb|CSP| = \verb|ID_CSP|} Source3.CSP$
 
-$Consommation\_CSP = \gamma_{ID\_CSP,\, Salaire\_Moyen;\; AVG(NB\_KW\_Jour \times 365) \to Conso\_moyenne\_annuelle}(R_4)$
+$\verb|Consommation_CSP| = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_4)$
 
 ### Hypothèses de clés étrangères
 
