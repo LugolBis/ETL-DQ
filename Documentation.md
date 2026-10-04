@@ -415,4 +415,6 @@ La **Cohérence** mesure la validité des relations entre les données.
 > [!WARNING]
 > Problèmes ouverts :
 > - Comment gérer les valeurs `Null` ?!
+>   - Filtrer les valeurs `Null`, est il censé de déduire des relations entre deux colonnes très incomplètes ? On pourrait donc définir un seuil de complétude à partir duquel les données ne sont pas prise en compte. À titre d'illustration, si le groupe `x'`, obtenu par regroupement de la colonne `x` selon la colonne `y`, présente plus de 25% de valeurs manquantes, nous pourrions considérer que `x'` est trop incomplet pour représenter fiablement `x` et l'exclure des calculs.
+>   - Définir `Sim(x, Null)` = 0 si `x` != `Null` sinon 1 -> Cette approche présente une limite : les valeurs nulles polarisent les résultats et introduisent un biais conséquent si le nombre d'observations est petit.
 > - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
