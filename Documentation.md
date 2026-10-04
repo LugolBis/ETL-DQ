@@ -409,8 +409,14 @@ La **Cohérence** mesure la validité des relations entre les données.
 				M2 = max_group_var / (var_intra + epsilon)
 				matrix_results[x][y] = [M1, M2, M3]
 		
+    # M1 (eta-squared) in [0;1], M1 -> 1 => There is a relation between x and y
+    # M2 high => There is a global relation, who don't work on an subgroup
+    # M3 detect if the subgroup is different from the global group (possible outliers)
 		return matrix_results
     ```
+
+- Distribution groupée des colonnes (_SLM_):
+  L'idée est ici d'utiliser un _SLM_ (Small Langage Model) pour générer les embeddings des chaînes de caractères dans l'algorithme ***EncodeProjRel***.
 
 > [!WARNING]
 > Problèmes ouverts :
@@ -418,3 +424,4 @@ La **Cohérence** mesure la validité des relations entre les données.
 >   - Filtrer les valeurs `Null`, est il censé de déduire des relations entre deux colonnes très incomplètes ? On pourrait donc définir un seuil de complétude à partir duquel les données ne sont pas prise en compte. À titre d'illustration, si le groupe `x'`, obtenu par regroupement de la colonne `x` selon la colonne `y`, présente plus de 25% de valeurs manquantes, nous pourrions considérer que `x'` est trop incomplet pour représenter fiablement `x` et l'exclure des calculs.
 >   - Définir `Sim(x, Null)` = 0 si `x` != `Null` sinon 1 -> Cette approche présente une limite : les valeurs nulles polarisent les résultats et introduisent un biais conséquent si le nombre d'observations est petit.
 > - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
+> - Discuter du nombre de dimensions des embeddings, pour trouver un équilibre entre temps d'exécution et précision.
