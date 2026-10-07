@@ -14,7 +14,7 @@
 ```mermaid
 flowchart BT
     subgraph MS["Mediation System"]
-        MSDB[("Consommation_IRIS_Paris(#ID_IRIS, Conso_moyenne_annuelle)<br><br>Consommation_IRIS_Evry(#ID_IRIS, Conso_moyenne_annuelle)<br><br>Consommation_CSP (ID_CSP, Conso_moyenne_annuelle,
+        MSDB[("Consommation_IRIS_Paris(#ID_IRIS, Conso_moyenne_annuelle)<br><br>Consommation_IRIS_Evry(#ID_IRIS, Conso_moyenne_annuelle)<br><br>Consommation_CSP (#ID_CSP, Conso_moyenne_annuelle,
 Salaire_Moyen)")]
     end
 
@@ -166,6 +166,7 @@ Métriques :
     - `Source1.Population.Code_Postal`
     - `Source2.Population.Code_Postal`
     - `Source4.IRIS.ID_Ville`
+
   Exemple :
     `Source3.CSP.ID_CSP` &#8838; {
       "agriculteurs exploitants",
@@ -223,11 +224,14 @@ Métriques :
   - `Source1.Population.CSP`
   - `Source2.Population.CSP`
   - `Source3.CSP.Salaire_Moyen`
+  - `Source1.Population.Adresse`
+  - `Source2.Population.Adresse`
+  - `Source1.Consommation.Nom_Rue`
+  - `Source2.Consommation.Nom_Rue`
+  - `Source1.Consommation.Code_Postal`
+  - `Source2.Consommation.Code_Postal`
 
     Exemple : Par exemple, sur 10 000 lignes de `Source1.Consommation`, si 200 ont `NB_KW_Jour` manquant alors le taux de complétude est de 98%.
-> [!CAUTION]
-> **TODO** : Ajouter les attributs non clé utilisés pour faire les jointures entre sources (pour former les tables de _MS_)
->
 
 #### Unicité
 
