@@ -24,7 +24,7 @@ SQL_QUERY_STATS = """
     schedule=None,
     start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
     catchup=False,
-    tags=["example", "airflow-v3", "sql"],
+    tags=["Consommation", "IRIS"],
 )
 def consommation_iris_evry():
     task_extract_conso = extract.override(task_id="Extract_Source2_Consommation")(
@@ -37,7 +37,7 @@ def consommation_iris_evry():
         DfWriter(DATA_DIR / "iris4.parquet", FileType.PARQUET),
     )
 
-    task_transform = apply_dfs(
+    task_transform = apply_dfs.override(task_id="Join_and_Agg_ops")(
         DfReader(DATA_DIR / "consommation2.parquet", FileType.PARQUET),
         DfReader(DATA_DIR / "iris4.parquet", FileType.PARQUET),
         lambda df_a, df_b: df_a.join(
