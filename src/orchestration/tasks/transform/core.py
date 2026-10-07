@@ -8,12 +8,12 @@ from orchestration.tasks.models import DfReader, DfWriter
 
 @task()
 def apply_dfs(
-    df_ra: DfReader,
-    df_rb: DfReader,
-    func: Callable[[DataFrame, DataFrame], DataFrame],
+    *dfs: DfReader,
+    func: Callable[..., DataFrame],
     df_w: DfWriter,
 ) -> None:
-    df_w.write(func(df_ra.read(), df_rb.read()))
+    loaded_dfs = [df_r.read() for df_r in dfs]
+    df_w.write(func(*loaded_dfs))
 
 
 @task()
