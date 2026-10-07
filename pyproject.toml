@@ -9,8 +9,9 @@ dependencies = [
     "apache-airflow-providers-celery>=3.24.0",
     "apache-airflow-providers-fab>=3.9.0",
     "asyncpg>=0.31.0",
+    "numpy>=2.5.3",
     "polars>=1.44.2",
-    "psycopg2",
+    "psycopg2-binary",
     "pyarrow>=25.0.1",
     "pymysql>=1.2.3",
 ]
@@ -18,3 +19,6 @@ dependencies = [
 [build-system]
 requires = ["uv_build>=0.12.13,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv]
+package = false
