@@ -40,13 +40,13 @@ def consommation_iris_evry():
     task_transform = apply_dfs.override(task_id="Join_and_Agg_ops")(
         DfReader(DATA_DIR / "consommation2.parquet", FileType.PARQUET),
         DfReader(DATA_DIR / "iris4.parquet", FileType.PARQUET),
-        lambda df_a, df_b: df_a.join(
+        func=lambda df_a, df_b: df_a.join(
             df_b,
             left_on=["Nom_Rue", "Code_Postal"],
             right_on=["ID_Rue", "ID_Ville"],
             how="inner",
         ).sql(SQL_QUERY_STATS),
-        DfWriter(DATA_DIR / "Consommation_IRIS_Evry.parquet", FileType.PARQUET),
+        df_w=DfWriter(DATA_DIR / "Consommation_IRIS_Evry.parquet", FileType.PARQUET),
     )
 
     task_display = display(
