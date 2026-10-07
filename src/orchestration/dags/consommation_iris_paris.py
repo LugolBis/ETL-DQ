@@ -1,0 +1,59 @@
+from pathlib import Path
+
+import pendulum
+from airflow.sdk import dag
+
+from orchestration.tasks.enums import FileType
+from orchestration.tasks.extract.core import extract
+from orchestration.tasks.load.system import display
+from orchestration.tasks.models import DfReader, DfWriter
+from orchestration.tasks.transform.core import apply_dfs
+
+DATA_DIR = Path("/opt/airflow/.data")
+
+SQL_QUERY_STATS = """
+    SELECT 
+        ID_Iris,
+        AVG(NB_KW_Jour * 365) AS Conso_moyenne_annuelle
+    FROM self
+    GROUP BY ID_Iris;
+"""
+
+
+@dag(
+    schedule=None,
+    start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
+    catchup=False,
+    tags=["example", "airflow-v3", "sql"],
+)
+def consommation_iris_paris():
+    task_extract_conso = extract.override(task_id="Extract_Source1_Consommation")(
+        DfReader(DATA_DIR / "Source1_Consommation.csv", FileType.CSV, has_header=True),
+        DfWriter(DATA_DIR / "consommation1.parquet", FileType.PARQUET),
+    )
+
+    task_extract_iris = extract.override(task_id="Extract_Source4_IRIS")(
+        DfReader(DATA_DIR / "Source4_IRIS.csv", FileType.CSV, has_header=True),
+        DfWriter(DATA_DIR / "iris4.parquet", FileType.PARQUET),
+    )
+
+    task_transform = apply_dfs(
+        DfReader(DATA_DIR / "consommation1.parquet", FileType.PARQUET),
+        DfReader(DATA_DIR / "iris4.parquet", FileType.PARQUET),
+        lambda df_a, df_b: df_a.join(
+            df_b,
+            left_on=["Nom_Rue", "Code_Postal"],
+            right_on=["ID_Rue", "ID_Ville"],
+            how="inner",
+        ).sql(SQL_QUERY_STATS),
+        DfWriter(DATA_DIR / "Consommation_IRIS_Paris.parquet", FileType.PARQUET),
+    )
+
+    task_display = display(
+        DfReader(DATA_DIR / "Consommation_IRIS_Paris.parquet", FileType.PARQUET), 15
+    )
+
+    [task_extract_conso, task_extract_iris] >> task_transform >> task_display
+
+
+dag_instance = consommation_iris_paris()
