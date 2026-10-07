@@ -4,6 +4,9 @@
 
 **ETL** choisit : _Airflow_.
 
+<img width="800" alt="Menu d'Airflow" src="doc/img/airflow_menu.png" />
+<img width="800" alt="DAG de test Airflow" src="doc/img/dag_test.png" />
+
 ## MS - Schéma cible
 
 ### Schéma
