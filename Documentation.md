@@ -270,18 +270,21 @@ La **Cohérence** mesure la validité des relations entre les données.
 
 	Algorithme ***FilterRel*** :
     ```python
-    def FilterRel(R: Relation) -> Relation:
-        pk_cols = SELECT column_name
-                FROM R.get_columns()
-                WHERE (
-                    SELECT COUNT(DISTINCT column_name)
-                    FROM R
-                ) = (
-                    SELECT COUNT(column_name)
-                    FROM R
-                );
-        # We exclude the `pk_cols` using difference between sets
-        target_cols = R.get_columns() \ pk_cols
+    def FilterRel(R: Relation, completude_seuil: float) -> Relation:
+        target_cols = {}
+
+        for column in R.columns():
+          # We exclude :
+          # - Candidate key columns
+          # - Columns with a single distinct value (excluding nulls)
+          # - Columns with insufficient completeness (below completude_seuil)
+          if (
+            column.distinct() < column.len()
+            and column.distincts_without_null() >= 2
+            and column.completude() >= completude_seuil
+          ):
+            target_cols.add(column.name)
+
         return SELECT target_cols FROM R;
     ```
 
@@ -414,11 +417,12 @@ La **Cohérence** mesure la validité des relations entre les données.
 				
 				M1 = (global_var - var_intra) / (global_var + epsilon)
 				M2 = max_group_var / (var_intra + epsilon)
+        M3 = M3 / (sqrt(global_var) + epsilon)
 				matrix_results[x][y] = [M1, M2, M3]
 		
     # M1 (eta-squared) in [0;1], M1 -> 1 => There is a relation between x and y
-    # M2 high => There is a global relation, who don't work on an subgroup
-    # M3 detect if the subgroup is different from the global group (possible outliers)
+    # M2 > 5 => There is a global relation, who don't work on an subgroup
+    # M3 > 10 => The subgroup is different from the global group (possible outliers)
 		return matrix_results
     ```
 
@@ -427,8 +431,7 @@ La **Cohérence** mesure la validité des relations entre les données.
 
 > [!WARNING]
 > Problèmes ouverts :
-> - Comment gérer les valeurs `Null` ?!
->   - Filtrer les valeurs `Null`, est il censé de déduire des relations entre deux colonnes très incomplètes ? On pourrait donc définir un seuil de complétude à partir duquel les données ne sont pas prise en compte. À titre d'illustration, si le groupe `x'`, obtenu par regroupement de la colonne `x` selon la colonne `y`, présente plus de 25% de valeurs manquantes, nous pourrions considérer que `x'` est trop incomplet pour représenter fiablement `x` et l'exclure des calculs.
->   - Définir `Sim(x, Null)` = 0 si `x` != `Null` sinon 1 -> Cette approche présente une limite : les valeurs nulles polarisent les résultats et introduisent un biais conséquent si le nombre d'observations est petit.
+> - La détection des règles métier pour la Cohérence présente des limites lorsque les ensembles de définition des deux colonnes (x, y) concernées ont une distribution très divergeante.
+  - Exemple : poids_kg => dosage_mg, or comme il existe bien plus de valeurs distinctes pour poids_kg que pour dosage_mg, seule la relation dosage_mg => poids_kg est détectée.
 > - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
 > - Discuter du nombre de dimensions des embeddings, pour trouver un équilibre entre temps d'exécution et précision.
