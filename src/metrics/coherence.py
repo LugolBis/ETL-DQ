@@ -48,7 +48,11 @@ def encode_proj_rel(df: DataFrame) -> DataFrame:
     str_cols = [name for name, dtype in df.schema.items() if dtype == pl.Utf8]
 
     for col_name in str_cols:
-        labels = df.select(pl.col(col_name).unique()).to_series().drop_nulls()
+        labels = (
+            df.select(pl.col(col_name).unique(maintain_order=True))
+            .to_series()
+            .drop_nulls()
+        )
         n = labels.len()
 
         D = compute_dissimilarity_matrix(labels)
