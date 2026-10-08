@@ -224,6 +224,7 @@ Métriques :
   - `Source1.Population.CSP`
   - `Source2.Population.CSP`
   - `Source3.CSP.Salaire_Moyen`
+  - `Source3.CSP.ID_CSP`
   - `Source1.Population.Adresse`
   - `Source2.Population.Adresse`
   - `Source1.Consommation.Nom_Rue`
