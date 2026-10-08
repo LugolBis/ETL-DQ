@@ -1,0 +1,51 @@
+id_ordonnance,id_patient,date_prescription,saison,sexe,age_ans,categorie_age,poids_kg,medicament,dosage_mg,forme,voie_orale,indication,duree_jours,medecin
+ORD-0001,PAT-5472,2024-12-09,hiver,F,19,adulte,97.0,Doliprane,1000,comprimé,true,post-vaccinal,2,Dr Martin
+ORD-0002,PAT-2910,2024-12-09,hiver,F,0,nourrisson,5.0,Doliprane,100,suppositoire,false,douleur,4,Dr Petit
+ORD-0003,PAT-8265,2024-12-09,hiver,F,12,adolescent,44.0,Doliprane,500,comprimé,true,post-vaccinal,2,Dr Bernard
+ORD-0004,PAT-5627,2024-12-09,hiver,F,1,nourrisson,8.5,Dafalgan,100,suppositoire,false,post-vaccinal,2,Dr Moreau
+ORD-0005,PAT-4502,2024-12-09,hiver,M,17,adolescent,54.0,Doliprane,1000,comprimé,true,douleur,5,Dr Petit
+ORD-0006,PAT-8220,2025-01-13,hiver,M,64,adulte,76.0,Doliprane,1000,sachet,true,fièvre,3,Dr Petit
+ORD-0007,PAT-3633,2025-01-13,hiver,M,73,adulte,62.0,Doliprane,1000,comprimé,true,syndrome grippal,4,Dr Moreau
+ORD-0008,PAT-6703,2025-01-13,hiver,F,4,enfant,16.0,Doliprane,300,suspension buvable,true,douleur,5,Dr Lefèvre
+ORD-0009,PAT-9499,2025-01-13,hiver,M,9,enfant,30.0,Doliprane,500,suspension buvable,true,douleur,6,Dr Lefèvre
+ORD-0010,PAT-3638,2025-01-13,hiver,M,41,adulte,69.0,Doliprane,1000,comprimé,true,syndrome grippal,4,Dr Lefèvre
+ORD-0011,PAT-7979,2025-01-13,hiver,M,0,nourrisson,4.5,Dafalgan,100,suppositoire,false,post-vaccinal,2,Dr Martin
+ORD-0012,PAT-4285,2025-01-13,hiver,F,0,nourrisson,4.5,Doliprane,100,suppositoire,false,post-vaccinal,2,Dr Bernard
+ORD-0013,PAT-4170,2025-01-13,hiver,M,15,adolescent,56.0,Doliprane,1000,comprimé,true,post-vaccinal,2,Dr Bernard
+ORD-0014,PAT-1167,2025-01-20,hiver,M,61,adulte,100.0,Efferalgan,1000,comprimé,true,syndrome grippal,3,Dr Bernard
+ORD-0015,PAT-5933,2025-01-20,hiver,F,14,adolescent,49.0,Doliprane,500,comprimé,true,post-vaccinal,2,Dr Lefèvre
+ORD-0016,PAT-4975,2025-01-20,hiver,F,5,enfant,30.0,Doliprane,500,sachet,true,syndrome grippal,4,Dr Moreau
+ORD-0017,PAT-8217,2025-01-20,hiver,M,8,enfant,30.0,Doliprane,500,sachet,true,fièvre,3,Dr Petit
+ORD-0018,PAT-5034,2025-01-20,hiver,F,17,adolescent,45.0,Dafalgan,500,comprimé,true,douleur,5,Dr Lefèvre
+ORD-0019,PAT-3219,2025-01-20,hiver,F,7,enfant,18.0,Doliprane,300,suspension buvable,true,douleur,5,Dr Martin
+ORD-0020,PAT-5083,2025-01-20,hiver,F,17,adolescent,65.0,Dafalgan,1000,sachet,true,syndrome grippal,4,Dr Bernard
+ORD-0021,PAT-4314,2025-02-03,hiver,F,3,enfant,15.0,Dafalgan,200,suspension buvable,true,syndrome grippal,4,Dr Lefèvre
+ORD-0022,PAT-5134,2025-02-03,hiver,F,9,enfant,28.0,Doliprane,300,suspension buvable,true,douleur,5,Dr Bernard
+ORD-0023,PAT-8310,2025-02-03,hiver,F,8,enfant,26.0,Doliprane,300,suspension buvable,true,post-vaccinal,2,Dr Moreau
+ORD-0024,PAT-6789,2025-04-07,printemps,F,0,nourrisson,5.0,Doliprane,100,suppositoire,false,post-vaccinal,2,Dr Lefèvre
+ORD-0025,PAT-2112,2025-04-07,printemps,F,30,adulte,65.0,Doliprane,500,comprimé,true,fièvre,3,Dr Martin
+ORD-0026,PAT-5302,2025-04-07,printemps,F,11,enfant,18.0,Doliprane,200,suspension buvable,true,fièvre,3,Dr Lefèvre
+ORD-0027,PAT-6707,2025-05-12,printemps,M,0,nourrisson,10.0,Doliprane,150,suppositoire,false,fièvre,3,Dr Moreau
+ORD-0028,PAT-9718,2025-05-12,printemps,M,77,adulte,87.0,Doliprane,1000,comprimé,true,fièvre,3,Dr Petit
+ORD-0029,PAT-6584,2025-05-12,printemps,M,7,enfant,30.0,Efferalgan,500,suspension buvable,true,syndrome grippal,4,Dr Lefèvre
+ORD-0030,PAT-6224,2025-07-14,ete,M,2,enfant,31.0,Doliprane,500,suspension buvable,true,post-vaccinal,2,Dr Martin
+ORD-0031,PAT-6478,2025-07-14,ete,M,43,adulte,82.0,Doliprane,1000,comprimé,true,douleur,5,Dr Bernard
+ORD-0032,PAT-1538,2025-08-04,ete,M,15,adolescent,43.0,Doliprane,500,comprimé,true,post-vaccinal,1,Dr Petit
+ORD-0033,PAT-1103,2025-08-04,ete,F,17,adolescent,55.0,Doliprane,1000,comprimé,true,syndrome grippal,4,Dr Moreau
+ORD-0034,PAT-7742,2025-08-04,ete,M,8,enfant,22.0,Doliprane,300,suspension buvable,true,syndrome grippal,4,Dr Lefèvre
+ORD-0035,PAT-2598,2025-10-06,automne,M,11,enfant,19.0,Doliprane,200,suspension buvable,true,douleur,5,Dr Martin
+ORD-0036,PAT-1264,2025-10-06,automne,F,2,enfant,14.0,Doliprane,150,suspension buvable,true,douleur,5,Dr Petit
+ORD-0037,PAT-3432,2025-10-06,automne,M,1,nourrisson,6.0,Doliprane,150,suppositoire,false,post-vaccinal,2,Dr Bernard
+ORD-0038,PAT-1326,2025-10-06,automne,M,1,nourrisson,10.0,Doliprane,150,suppositoire,false,syndrome grippal,4,Dr Moreau
+ORD-0039,PAT-9870,2025-10-06,automne,F,46,adulte,87.0,Doliprane,1000,comprimé,true,fièvre,3,Dr Martin
+ORD-0040,PAT-4197,2025-10-06,automne,M,84,adulte,78.0,Doliprane,1000,sachet,true,fièvre,3,Dr Bernard
+ORD-0041,PAT-1324,2025-11-17,automne,F,16,adolescent,53.0,Doliprane,1000,comprimé,true,douleur,5,Dr Martin
+ORD-0042,PAT-4892,2025-11-17,automne,F,85,adulte,97.0,Doliprane,1000,comprimé,true,post-vaccinal,2,Dr Petit
+ORD-0043,PAT-5480,2025-11-17,automne,F,0,nourrisson,4.0,Doliprane,100,suppositoire,false,post-vaccinal,2,Dr Moreau
+ORD-0044,PAT-3464,2025-11-17,automne,F,56,adulte,76.0,Efferalgan,1000,comprimé,true,syndrome grippal,4,Dr Bernard
+ORD-0045,PAT-1462,2025-11-17,automne,F,85,adulte,95.0,Doliprane,1000,comprimé,true,douleur,5,Dr Bernard
+ORD-0046,PAT-9193,2025-11-17,automne,M,62,adulte,73.0,Doliprane,1000,comprimé,true,syndrome grippal,4,Dr Bernard
+ORD-0047,PAT-1737,2025-11-17,automne,M,65,adulte,82.0,Doliprane,1000,comprimé,true,douleur,5,Dr Bernard
+ORD-0048,PAT-1399,2025-11-17,automne,M,6,enfant,14.0,Doliprane,150,suspension buvable,true,post-vaccinal,2,Dr Martin
+ORD-0049,PAT-5240,2025-11-17,automne,M,5,enfant,25.0,Dafalgan,300,suspension buvable,true,post-vaccinal,2,Dr Petit
+ORD-0050,PAT-2917,2025-11-17,automne,F,0,nourrisson,9.0,Doliprane,100,suppositoire,false,fièvre,3,Dr Lefèvre
