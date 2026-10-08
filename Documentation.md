@@ -432,6 +432,6 @@ La **Cohérence** mesure la validité des relations entre les données.
 > [!WARNING]
 > Problèmes ouverts :
 > - La détection des règles métier pour la Cohérence présente des limites lorsque les ensembles de définition des deux colonnes (x, y) concernées ont une distribution très divergeante.
-  - Exemple : poids_kg => dosage_mg, or comme il existe bien plus de valeurs distinctes pour poids_kg que pour dosage_mg, seule la relation dosage_mg => poids_kg est détectée.
+>   - Exemple : poids_kg => dosage_mg, or comme il existe bien plus de valeurs distinctes pour poids_kg que pour dosage_mg, seule la relation dosage_mg => poids_kg est détectée.
 > - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
 > - Discuter du nombre de dimensions des embeddings, pour trouver un équilibre entre temps d'exécution et précision.
