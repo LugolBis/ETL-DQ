@@ -393,5 +393,10 @@ class TestEndToEndCoherence:
         df = pl.read_csv(DATA_PATH, try_parse_dates=True)
         out = analyze_grouped_distribution(df)
 
+        relationships = out.filter(
+            (pl.col("M1") > 0.50) & ((pl.col("M2") > 5) | (pl.col("M3") > 10))
+        )
+        relationships.write_parquet("/tmp/relationships.parquet")
+
         assert out.height == 13 * 12
         assert metric(out, "duree_jours", "indication", "M1") > 0.8
