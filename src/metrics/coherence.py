@@ -189,7 +189,7 @@ def analyze_grouped_distribution(
                 dists = np.linalg.norm(mus - global_mu, axis=1)
             else:
                 dists = np.abs(mus - global_mu)
-            M3 = float(np.max(np.sqrt(Ng) * dists))
+            M3 = float(np.max(np.sqrt(Ng) * dists)) / (np.sqrt(global_var) + epsilon)
 
             M1 = (global_var - var_intra) / (global_var + epsilon)
             M2 = max_group_var / (var_intra + epsilon)
