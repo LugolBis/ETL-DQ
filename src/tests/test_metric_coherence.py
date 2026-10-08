@@ -62,14 +62,160 @@ class TestFilterRel:
         df = pl.DataFrame({"k": [1, None, 3], "v": [1, 1, 2]})
         assert filter_rel(df).columns == ["v"]
 
-    def test_empty_dataframe_drops_every_column(self):
-        # height == 0 et n_unique == 0 pour chaque colonne -> tout est « unique »
-        df = pl.DataFrame({"a": [], "b": []})
-        assert filter_rel(df).width == 0
+    @pytest.mark.parametrize(
+        "constant",
+        [["a", "a", "a"], [1, 1, 1], [True, True, True], [0.5, 0.5, 0.5]],
+        ids=["str", "int", "bool", "float"],
+    )
+    def test_drops_constant_column(self, constant):
+        # Une colonne constante n'apporte aucune information relationnelle et
+        # ferait crash encode_proj_rel (perplexity = 0) si elle est textuelle.
+        df = pl.DataFrame({"const": constant, "v": ["x", "x", "y"], "id": [1, 2, 3]})
+        assert filter_rel(df).columns == ["v"]
+
+    def test_drops_column_that_is_entirely_null(self):
+        # n_unique() == 1 pour une colonne 100 % null -> traitée comme constante
+        df = pl.DataFrame(
+            {"empty": pl.Series([None, None, None], dtype=pl.String), "v": [1, 1, 2]}
+        )
+        assert filter_rel(df).columns == ["v"]
+
+    def test_keeps_column_with_exactly_two_distinct_values(self):
+        # borne basse : 2 valeurs distinctes suffisent à garder la colonne
+        df = pl.DataFrame({"binary": ["a", "b", "a", "b"], "id": [1, 2, 3, 4]})
+        assert filter_rel(df).columns == ["binary"]
 
     def test_single_row_drops_every_column(self):
         df = pl.DataFrame({"a": [1], "b": ["x"]})
         assert filter_rel(df).width == 0
+
+
+def _frame_with_k_non_null(n: int, k: int) -> pl.DataFrame:
+    """Colonne `c` de n lignes dont k valeurs non nulles (non constante, non unique)."""
+    values = [i % 3 for i in range(k)] + [None] * (n - k)
+    return pl.DataFrame({"c": pl.Series(values, dtype=pl.Int64)})
+
+
+class TestFilterRelCompleteness:
+    def test_default_not_keeps_columns_with_nulls(self):
+        df = _frame_with_k_non_null(n=10, k=2)
+        assert filter_rel(df).width == 0
+
+    def test_eighty_threshold_is_same_as_default(self):
+        df = _frame_with_k_non_null(n=10, k=2)
+        assert filter_rel(df, seuil_completude=0.8).equals(filter_rel(df))
+
+    def test_drops_column_below_threshold(self):
+        df = _frame_with_k_non_null(n=10, k=2)  # 20 % de complétude
+        assert filter_rel(df, seuil_completude=0.5).width == 0
+
+    def test_keeps_column_above_threshold(self):
+        df = _frame_with_k_non_null(n=10, k=8)  # 80 %
+        assert filter_rel(df, seuil_completude=0.5).columns == ["c"]
+
+    def test_threshold_is_inclusive(self):
+        df = _frame_with_k_non_null(n=10, k=5)  # exactement 50 %
+        assert filter_rel(df, seuil_completude=0.5).columns == ["c"]
+
+    def test_just_below_threshold_is_dropped(self):
+        df = _frame_with_k_non_null(n=10, k=4)  # 40 % < 50 %
+        assert filter_rel(df, seuil_completude=0.5).width == 0
+
+    @pytest.mark.parametrize(
+        "n,k,seuil",
+        [(50, 7, 0.14), (50, 14, 0.28), (25, 7, 0.28), (50, 28, 0.56)],
+    )
+    def test_exact_boundary_is_not_broken_by_float_rounding(self, n, k, seuil):
+        # k/n == seuil exactement, mais n * seuil donne 7.000000000000001 :
+        # un test `k >= n * seuil` rejetterait à tort ces colonnes.
+        df = _frame_with_k_non_null(n=n, k=k)
+        assert filter_rel(df, seuil_completude=seuil).columns == ["c"]
+
+    def test_threshold_one_keeps_only_fully_filled_columns(self):
+        df = pl.DataFrame({"full": [1, 1, 2, 2], "holes": [1, None, 2, 2]})
+        assert filter_rel(df, seuil_completude=1.0).columns == ["full"]
+
+    def test_threshold_applies_per_column(self):
+        df = pl.DataFrame(
+            {
+                "dense": [1, 2, 1, 2, 1, 2, 1, 2, 1, None],  # 90 %
+                "sparse": [
+                    1,
+                    2,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ],  # 20 %
+            }
+        )
+        assert filter_rel(df, seuil_completude=0.5).columns == ["dense"]
+
+    def test_single_value_plus_nulls_is_dropped_with_reasonable_threshold(self):
+        # Le cas limite à l'origine du crash TSNE (perplexity = 0).
+        df = pl.DataFrame({"rare": ["a"] + [None] * 49, "v": [0, 1] * 25})
+        assert filter_rel(df, seuil_completude=0.5).columns == ["v"]
+
+    def test_complete_but_constant_column_is_still_dropped(self):
+        df = pl.DataFrame({"const": ["a"] * 4, "v": [1, 1, 2, 2]})
+        assert filter_rel(df, seuil_completude=1.0).columns == ["v"]
+
+    def test_complete_but_unique_column_is_still_dropped(self):
+        df = pl.DataFrame({"id": [1, 2, 3, 4], "v": [1, 1, 2, 2]})
+        assert filter_rel(df, seuil_completude=1.0).columns == ["v"]
+
+    def test_preserves_order_and_rows(self):
+        df = pl.DataFrame(
+            {
+                "b": [1, 2, 1, 2],
+                "gone": [None, None, None, 1],
+                "a": ["x", "y", "x", "y"],
+            }
+        )
+        out = filter_rel(df, seuil_completude=0.5)
+        assert out.columns == ["b", "a"]
+        assert out.height == 4
+
+    @pytest.mark.parametrize("seuil", [0.0, 0.5, 1.0])
+    def test_single_distinct_value_plus_few_nulls_is_dropped(self, seuil):
+        # 9 fois "a" + 1 null : complétude 90 % mais une seule valeur distincte
+        # hors null -> écartée quel que soit le seuil.
+        df = pl.DataFrame({"mono": ["a"] * 9 + [None], "v": [1, 2] * 5})
+        assert filter_rel(df, seuil_completude=seuil).columns == ["v"]
+
+    def test_two_distinct_values_plus_nulls_is_kept(self):
+        # borne basse du critère « valeurs distinctes hors null » : 2 suffisent
+        df = pl.DataFrame({"c": ["a", "b", "a", None, "b", "a"]})
+        assert filter_rel(df).columns == ["c"]
+
+    def test_constant_column_is_dropped_whether_or_not_it_has_nulls(self):
+        df = pl.DataFrame(
+            {
+                "const_full": ["a"] * 6,
+                "const_nulls": ["a", "a", "a", "a", None, None],
+                "v": [1, 1, 2, 2, 3, 3],
+            }
+        )
+        assert filter_rel(df).columns == ["v"]
+
+    def test_completeness_exactly_zero_non_null_values(self):
+        df = pl.DataFrame(
+            {"all_null": pl.Series([None] * 4, dtype=pl.Float64), "v": [1, 1, 2, 2]}
+        )
+        assert filter_rel(df, seuil_completude=0.0).columns == ["v"]
+
+    @pytest.mark.parametrize("seuil", [0.0, 1.0])
+    def test_bounds_are_valid(self, seuil):
+        filter_rel(pl.DataFrame({"a": [1, 1, 2]}), seuil_completude=seuil)
+
+    @pytest.mark.parametrize("seuil", [-0.01, 1.01, 50, float("nan")])
+    def test_invalid_threshold_raises(self, seuil):
+        with pytest.raises(AssertionError, match="seuil_completude"):
+            filter_rel(pl.DataFrame({"a": [1, 1, 2]}), seuil_completude=seuil)
 
 
 class TestComputeDissimilarityMatrix:
