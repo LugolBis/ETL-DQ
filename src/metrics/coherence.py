@@ -8,10 +8,26 @@ from polars import DataFrame, Series
 from sklearn.manifold import TSNE
 
 
-def filter_rel(df: DataFrame) -> DataFrame:
+def filter_rel(df: DataFrame, seuil_completude: float = 0.8) -> DataFrame:
+    assert 0.0 <= seuil_completude <= 1.0, (
+        f"Error: `seuil_completude` should be in [0; 1], fund {seuil_completude}"
+    )
+
     n = df.height
     pk_cols = df.select(pl.all().n_unique())
-    target_cols = [col for col in df.columns if pk_cols[col][0] != n]
+    null_cols = df.null_count()
+
+    def is_representative(col: str) -> bool:
+        distinct_vals = pk_cols[col][0]
+        null_count = null_cols[col][0]
+
+        return (
+            (distinct_vals != n)
+            and ((distinct_vals - int(null_count > 0)) >= 2)
+            and ((n - null_count) / n >= seuil_completude)
+        )
+
+    target_cols = [col for col in df.columns if is_representative(col)]
 
     return df.select(target_cols)
 
@@ -91,3 +107,105 @@ def encode_num_rel(df: DataFrame) -> DataFrame:
         for name, dtype in df.schema.items()
     ]
     return df.with_columns(exprs)
+
+
+def _global_stats(df_encoded: DataFrame, x: str):
+    """Return : tuple[ndarray | float, float]"""
+    dtype = df_encoded.schema[x]
+    if isinstance(dtype, pl.Array):
+        c0 = df_encoded[x].arr.get(0)
+        c1 = df_encoded[x].arr.get(1)
+        mu = np.array(
+            [
+                df_encoded.select(c0.mean()).item(),
+                df_encoded.select(c1.mean()).item(),
+            ]
+        )
+        var = (
+            df_encoded.select(c0.var(ddof=0)).item()
+            + df_encoded.select(c1.var(ddof=0)).item()
+        )
+        return mu, var
+    return df_encoded[x].mean(), df_encoded[x].var(ddof=0)
+
+
+def _grouped_stats(df_encoded: DataFrame, x: str, y: str):
+    dtype = df_encoded.schema[x]
+    if isinstance(dtype, pl.Array):
+        df2 = df_encoded.with_columns(
+            [
+                pl.col(x).arr.get(0).alias(f"{x}__c0"),
+                pl.col(x).arr.get(1).alias(f"{x}__c1"),
+            ]
+        )
+        agg = df2.group_by(y).agg(
+            [
+                pl.col(f"{x}__c0").count().alias("N"),
+                pl.col(f"{x}__c0").mean().alias("mu0"),
+                pl.col(f"{x}__c1").mean().alias("mu1"),
+                pl.col(f"{x}__c0").var(ddof=0).alias("v0"),
+                pl.col(f"{x}__c1").var(ddof=0).alias("v1"),
+            ]
+        )
+        return (
+            agg["N"].to_numpy(),
+            np.stack([agg["mu0"].to_numpy(), agg["mu1"].to_numpy()], axis=1),
+            agg["v0"].to_numpy() + agg["v1"].to_numpy(),
+        )
+    agg = df_encoded.group_by(y).agg(
+        [
+            pl.col(x).count().alias("N"),
+            pl.col(x).mean().alias("mu"),
+            pl.col(x).var(ddof=0).alias("var"),
+        ]
+    )
+    return agg["N"].to_numpy(), agg["mu"].to_numpy(), agg["var"].to_numpy()
+
+
+def analyze_grouped_distribution(
+    df: DataFrame, seuil_completude: float = 0.8
+) -> DataFrame:
+    df_filtered = filter_rel(df, seuil_completude)
+    df_encoded = encode_proj_rel(encode_num_rel(df_filtered))
+
+    N = df_encoded.height
+    epsilon = 10e-12
+    columns = df_encoded.columns
+
+    global_cache = {x: _global_stats(df_encoded, x) for x in columns}
+    xs_out, ys_out, m1s, m2s, m3s = [], [], [], [], []
+
+    for x in columns:
+        global_mu, global_var = global_cache[x]
+        for y in columns:
+            if y == x:
+                continue
+            Ng, mus, vars_g = _grouped_stats(df_encoded, x, y)
+
+            var_intra = float(np.sum((Ng / N) * vars_g))
+            max_group_var = float(np.max(vars_g))
+
+            if isinstance(global_mu, np.ndarray):
+                dists = np.linalg.norm(mus - global_mu, axis=1)
+            else:
+                dists = np.abs(mus - global_mu)
+            M3 = float(np.max(np.sqrt(Ng) * dists))
+
+            M1 = (global_var - var_intra) / (global_var + epsilon)
+            M2 = max_group_var / (var_intra + epsilon)
+
+            xs_out.append(x)
+            ys_out.append(y)
+            m1s.append(M1)
+            m2s.append(M2)
+            m3s.append(M3)
+
+    return DataFrame(
+        {
+            "x": pl.Series(xs_out, dtype=pl.String),
+            "y": pl.Series(ys_out, dtype=pl.String),
+            "M1": pl.Series(m1s, dtype=pl.Float64),
+            "M2": pl.Series(m2s, dtype=pl.Float64),
+            "M3": pl.Series(m3s, dtype=pl.Float64),
+        }
+    )
