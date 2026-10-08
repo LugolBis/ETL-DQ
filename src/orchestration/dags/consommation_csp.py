@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pendulum
 import polars as pl
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 from airflow.sdk.bases.decorator import Task, XComArg
 from polars import DataFrame
@@ -56,6 +57,9 @@ def _gen_extracts(
     tags=["Consommation", "CSP"],
 )
 def consommation_csp():
+    start = EmptyOperator(task_id="start")
+    end = EmptyOperator(task_id="end")
+
     # The order of `names` is important
     tasks_extract_source1, out_paths1 = _gen_extracts(1, ["Population", "Consommation"])
     tasks_extract_source2, out_paths2 = _gen_extracts(2, ["Population", "Consommation"])
@@ -97,9 +101,10 @@ def consommation_csp():
     )
 
     # Tasks chaining
-    tasks_extract_source1 >> task_transform  # ty: ignore[unsupported-operator]
-    tasks_extract_source2 >> task_transform  # ty: ignore[unsupported-operator]
-    task_extract_source3 >> task_transform >> task_display
+    start >> tasks_extract_source1 >> task_transform
+    start >> tasks_extract_source2 >> task_transform
+    start >> task_extract_source3 >> task_transform
+    task_transform >> task_display >> end
 
 
 dag_instance = consommation_csp()

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pendulum
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 
 from orchestration.tasks.enums import FileType
@@ -27,6 +28,9 @@ SQL_QUERY_STATS = """
     tags=["Consommation", "IRIS"],
 )
 def consommation_iris_evry():
+    start = EmptyOperator(task_id="start")
+    end = EmptyOperator(task_id="end")
+
     task_extract_conso = extract.override(task_id="Extract_Source2_Consommation")(
         DfReader(DATA_DIR / "Source2_Consommation.csv", FileType.CSV, has_header=True),
         DfWriter(DATA_DIR / "consommation2.parquet", FileType.PARQUET),
@@ -53,7 +57,13 @@ def consommation_iris_evry():
         DfReader(DATA_DIR / "Consommation_IRIS_Evry.parquet", FileType.PARQUET), 15
     )
 
-    [task_extract_conso, task_extract_iris] >> task_transform >> task_display
+    (
+        start
+        >> [task_extract_conso, task_extract_iris]
+        >> task_transform
+        >> task_display
+        >> end
+    )
 
 
 dag_instance = consommation_iris_evry()
