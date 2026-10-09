@@ -25,4 +25,4 @@ def completude_assessment(
 
     df_union = pl.concat(dfs, how="vertical")
 
-    df_w.write(df_union)
+    df_w.update(df_union)
