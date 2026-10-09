@@ -5,7 +5,11 @@ import numpy as np
 import polars as pl
 import pytest
 
-from metrics.coherence import analyze_grouped_distribution, filter_rel
+from metrics.coherence import (
+    analyze_grouped_distribution,
+    encode_proj_rel_slm,
+    filter_rel,
+)
 
 DATA_PATH = Path(__file__).parent / "resources" / "prescriptions_doliprane.csv"
 
@@ -397,6 +401,18 @@ class TestEndToEndCoherence:
             (pl.col("M1") > 0.50) & ((pl.col("M2") > 5) | (pl.col("M3") > 10))
         )
         relationships.write_parquet("/tmp/relationships.parquet")
+
+        assert out.height == 13 * 12
+        assert metric(out, "duree_jours", "indication", "M1") > 0.8
+
+    def test_end_to_end_algorithm_slm(self):
+        df = pl.read_csv(DATA_PATH, try_parse_dates=True)
+        out = analyze_grouped_distribution(df, 0.8, encode_proj_rel_slm)
+
+        relationships = out.filter(
+            (pl.col("M1") > 0.50) & ((pl.col("M2") > 5) | (pl.col("M3") > 10))
+        )
+        relationships.write_parquet("/tmp/relationships_slm.parquet")
 
         assert out.height == 13 * 12
         assert metric(out, "duree_jours", "indication", "M1") > 0.8
