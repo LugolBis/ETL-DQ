@@ -5,6 +5,7 @@ from datetime import date, datetime
 import numpy as np
 import polars as pl
 import pytest
+from polars import DataFrame
 
 from metrics.coherence import (
     compute_dissimilarity_matrix,
@@ -12,6 +13,7 @@ from metrics.coherence import (
     encode_proj_rel,
     filter_rel,
     multimodal_distance,
+    analyze_grouped_distribution,
 )
 
 
@@ -362,7 +364,6 @@ def df_with_strings() -> pl.DataFrame:
         }
     )
 
-
 class TestEncodeProjRel:
     def test_string_column_becomes_array_of_two_floats(self, df_with_strings):
         result = encode_proj_rel(df_with_strings)
@@ -441,6 +442,90 @@ class TestEncodeProjRel:
         with pytest.raises(Exception):
             encode_proj_rel(df)
 
+
+def fake_encoder(df: DataFrame, d: int = 4) -> DataFrame:
+        """Fake encoder for testing purposes"""
+
+        str_cols = [name for name, dtype in df.schema.items() if dtype == pl.Utf8]
+        for col_name in str_cols:
+            labels = (
+                df.select(pl.col(col_name).unique(maintain_order=True))
+                .to_series()
+                .drop_nulls()
+            )
+            n = labels.len()
+
+            # Create a fake embedding of size d for each label
+            rng = np.random.default_rng(42)  # Set a fixed seed for reproducibility
+            embeddings = rng.random((n, d))
+
+            mapping = {
+                lab: [float(x) for x in row]
+                for lab, row in zip(labels.to_list(), embeddings)
+            }
+
+        
+            df = df.with_columns(
+                pl.col(col_name)
+                .replace_strict(mapping, default=None, return_dtype=pl.Array(pl.Float64, d))
+                .alias(col_name)
+            )
+        return df
+
+class TestAnalyzeGroupedDistribution:
+    y = ["a","a","b","b","c","c","d","d"]
+    x = ["u","u","v","v","w","w","w","w"]
+
+    df1 = pl.DataFrame({"x": x, "y": y})
+
+    y2 = list("aabbccdd")
+    x2 = ["u","v"] * 4
+
+    df2 = pl.DataFrame({"x": x2, "y": y2})
+
+    dfs = [df1, df2]
+
+    
+
+    def test_fake_encoder_works_for_df1(self):
+        result = fake_encoder(self.df1)
+        assert result.schema["x"] == pl.Array(pl.Float64, 4)
+        assert result.schema["y"] == pl.Array(pl.Float64, 4)
+        assert result.height == self.df1.height
+        assert result["x"][0].equals(result["x"][1])
+        assert not result["x"][0].equals(result["x"][2])
+
+
+    def test_fake_encoder_works_for_df2(self):
+        result = fake_encoder(self.df2)
+        assert result.schema["x"] == pl.Array(pl.Float64, 4)
+        assert result.schema["y"] == pl.Array(pl.Float64, 4)
+        assert result.height == self.df2.height
+        assert result["x"][0].equals(result["x"][2])
+        assert not result["x"][0].equals(result["x"][1])
+
+
+    def test_reproductibility_of_fake_encoder(self):
+        result1 = fake_encoder(self.df1)
+        result2 = fake_encoder(self.df1)
+        assert result1.equals(result2)
+
+
+    def test_analyse_grouped_distribution_with_fake_encoder_df1(self):
+        result = analyze_grouped_distribution(self.df1, encoder=fake_encoder)
+        row = result.filter((pl.col("x") == "x") & (pl.col("y") == "y"))
+        assert row["M1"][0] == pytest.approx(1.0)
+        row2 = result.filter((pl.col("y") == "x") & (pl.col("x") == "y"))
+        assert row2["M1"][0] < 0.99
+
+
+    def test_analyse_grouped_distribution_with_fake_encoder_df2(self):
+
+        result = analyze_grouped_distribution(self.df2, encoder=fake_encoder)
+        row = result.filter((pl.col("x") == "x") & (pl.col("y") == "y"))
+        assert row["M1"][0] == pytest.approx(0.0)
+        row2 = result.filter((pl.col("y") == "x") & (pl.col("x") == "y"))
+        assert row2["M1"][0] == pytest.approx(0.0)
 
 class TestEncodeNumRel:
     def test_boolean_is_cast_to_int8(self):

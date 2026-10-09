@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 import Levenshtein
 import numpy as np
@@ -6,6 +6,7 @@ import polars as pl
 from numpy import ndarray
 from polars import DataFrame, Series
 from sklearn.manifold import TSNE
+from functools import lru_cache
 
 
 def filter_rel(df: DataFrame, seuil_completude: float = 0.8) -> DataFrame:
@@ -111,47 +112,29 @@ def encode_num_rel(df: DataFrame) -> DataFrame:
 
 def _global_stats(df_encoded: DataFrame, x: str):
     """Return : tuple[ndarray | float, float]"""
-    dtype = df_encoded.schema[x]
-    if isinstance(dtype, pl.Array):
-        c0 = df_encoded[x].arr.get(0)
-        c1 = df_encoded[x].arr.get(1)
-        mu = np.array(
-            [
-                df_encoded.select(c0.mean()).item(),
-                df_encoded.select(c1.mean()).item(),
-            ]
-        )
-        var = (
-            df_encoded.select(c0.var(ddof=0)).item()
-            + df_encoded.select(c1.var(ddof=0)).item()
-        )
-        return mu, var
-    return df_encoded[x].mean(), df_encoded[x].var(ddof=0)
+    values = df_encoded[x].drop_nulls().to_numpy()
+    return values.mean(axis=0), values.var(axis=0, ddof=0).sum()
 
 
 def _grouped_stats(df_encoded: DataFrame, x: str, y: str):
     dtype = df_encoded.schema[x]
+    
     if isinstance(dtype, pl.Array):
-        df2 = df_encoded.with_columns(
-            [
-                pl.col(x).arr.get(0).alias(f"{x}__c0"),
-                pl.col(x).arr.get(1).alias(f"{x}__c1"),
-            ]
-        )
-        agg = df2.group_by(y).agg(
-            [
-                pl.col(f"{x}__c0").count().alias("N"),
-                pl.col(f"{x}__c0").mean().alias("mu0"),
-                pl.col(f"{x}__c1").mean().alias("mu1"),
-                pl.col(f"{x}__c0").var(ddof=0).alias("v0"),
-                pl.col(f"{x}__c1").var(ddof=0).alias("v1"),
-            ]
-        )
-        return (
-            agg["N"].to_numpy(),
-            np.stack([agg["mu0"].to_numpy(), agg["mu1"].to_numpy()], axis=1),
-            agg["v0"].to_numpy() + agg["v1"].to_numpy(),
-        )
+        g= df_encoded.group_by(y).agg(pl.col(x).drop_nulls())
+        N, mu, var = [], [], []
+        for v in g[x]:
+            m = np.array(v)
+            if m.shape[0] == 0:
+                continue
+            N_g = m.shape[0]
+            mu_g = m.mean(axis=0)
+            var_g = m.var(axis=0, ddof=0).sum()
+
+            N.append(N_g)
+            mu.append(mu_g)
+            var.append(var_g)
+        return np.array(N), np.array(mu), np.array(var)
+    
     agg = df_encoded.group_by(y).agg(
         [
             pl.col(x).count().alias("N"),
@@ -159,14 +142,15 @@ def _grouped_stats(df_encoded: DataFrame, x: str, y: str):
             pl.col(x).var(ddof=0).alias("var"),
         ]
     )
+
     return agg["N"].to_numpy(), agg["mu"].to_numpy(), agg["var"].to_numpy()
 
 
 def analyze_grouped_distribution(
-    df: DataFrame, seuil_completude: float = 0.8
+    df: DataFrame, seuil_completude: float = 0.8, encoder: Callable[[DataFrame], DataFrame] = encode_proj_rel
 ) -> DataFrame:
     df_filtered = filter_rel(df, seuil_completude)
-    df_encoded = encode_proj_rel(encode_num_rel(df_filtered))
+    df_encoded = encoder(encode_num_rel(df_filtered))
 
     N = df_encoded.height
     epsilon = 10e-12
@@ -209,3 +193,33 @@ def analyze_grouped_distribution(
             "M3": pl.Series(m3s, dtype=pl.Float64),
         }
     )
+
+
+@lru_cache(maxsize=1)
+def _load_model(model_name):
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer(model_name)
+
+
+def encode_proj_rel_slm(df, model_name="intfloat/multilingual-e5-small"):
+    model = _load_model(model_name)
+    str_cols = [name for name, dtype in df.schema.items() if dtype == pl.Utf8]
+    for col_name in str_cols:
+        labels = (
+            df.select(pl.col(col_name).unique(maintain_order=True))
+            .to_series()
+            .drop_nulls()
+        )
+        if labels.len() == 0:
+            continue
+        prefixed = [f"query: {x}" for x in labels.to_list()]
+        embeddings = model.encode(prefixed, normalize_embeddings=True)
+        mapping = dict(zip(labels.to_list(), embeddings))
+        df = df.with_columns(
+            pl.col(col_name)
+            .replace_strict(mapping, default=None, return_dtype=pl.Array(pl.Float64, embeddings.shape[1]))
+            .alias(col_name)
+        )
+
+    return df
