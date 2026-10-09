@@ -9,6 +9,8 @@ from numpy import ndarray
 from polars import DataFrame, Series
 from sklearn.manifold import TSNE
 
+from metrics.helpers import unique_alias
+
 
 def filter_rel(df: DataFrame, seuil_completude: float = 0.8) -> DataFrame:
     assert 0.0 <= seuil_completude <= 1.0, (
@@ -136,15 +138,22 @@ def _grouped_stats(df_encoded: DataFrame, x: str, y: str):
             var.append(var_g)
         return np.array(N), np.array(mu), np.array(var)
 
+    existing = set(df_encoded.columns)
+    aliases = [unique_alias(a, existing) for a in ["N", "mu", "var"]]
+
     agg = df_encoded.group_by(y).agg(
         [
-            pl.col(x).count().alias("N"),
-            pl.col(x).mean().alias("mu"),
-            pl.col(x).var(ddof=0).alias("var"),
+            pl.col(x).count().alias(aliases[0]),
+            pl.col(x).mean().alias(aliases[1]),
+            pl.col(x).var(ddof=0).alias(aliases[2]),
         ]
     )
 
-    return agg["N"].to_numpy(), agg["mu"].to_numpy(), agg["var"].to_numpy()
+    return (
+        agg[aliases[0]].to_numpy(),
+        agg[aliases[1]].to_numpy(),
+        agg[aliases[2]].to_numpy(),
+    )
 
 
 def analyze_grouped_distribution(
