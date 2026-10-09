@@ -46,3 +46,27 @@ def label_set(
             "timestamp": timestamp,
         }
     )
+
+
+def interval_validity(
+    df: DataFrame, columns: list[str], min_val: float, max_val: float, source: str
+) -> DataFrame:
+    n = df.height
+    timestamp = datetime.now(ZoneInfo("UTC"))
+
+    count = df.select(
+        ((pl.col(columns) >= min_val) & (pl.col(columns) <= max_val)).sum()
+    )
+
+    result = count.unpivot(
+        on=columns,
+        variable_name="column_name",
+        value_name="match_count",
+    )
+
+    return result.select(
+        pl.lit(source).alias("source"),
+        pl.col("column_name"),
+        (pl.col("match_count") / n).alias("interval_percent"),
+        pl.lit(timestamp).alias("timestamp"),
+    )

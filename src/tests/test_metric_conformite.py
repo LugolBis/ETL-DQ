@@ -5,7 +5,7 @@ import polars as pl
 import pytest
 from polars import DataFrame
 
-from metrics.conformite import label_set, text_format
+from metrics.conformite import interval_validity, label_set, text_format
 
 EMAIL_REGEX = r"^[\w.+-]+@[\w-]+\.[\w.-]+$"
 CODE_POSTAL_FR_REGEX = r"^(0[1-9]|[1-8]\d|9[0-5])\d{3}$"
@@ -317,3 +317,168 @@ class TestConformiteLabels:
         df = pl.DataFrame({"a": ["x", "y"]})
         result = label_set(df, ["a"], [], "s")
         assert result["labels_percent"].to_list() == [0.0]
+
+
+class TestConformiteInterval:
+    def test_all_values_in_interval(self):
+        df = pl.DataFrame({"a": [1.0, 2.0, 3.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [1.0]
+
+    def test_no_value_in_interval(self):
+        df = pl.DataFrame({"a": [10.0, 20.0, 30.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    def test_partial_match(self):
+        df = pl.DataFrame({"a": [1.0, 2.0, 100.0, 3.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [0.75]
+
+    def test_single_value_in_interval(self):
+        df = pl.DataFrame({"a": [3.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [1.0]
+
+    def test_single_value_out_of_interval(self):
+        df = pl.DataFrame({"a": [10.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    def test_min_bound_is_inclusive(self):
+        df = pl.DataFrame({"a": [0.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [1.0]
+
+    def test_max_bound_is_inclusive(self):
+        df = pl.DataFrame({"a": [5.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [1.0]
+
+    def test_both_bounds_inclusive(self):
+        df = pl.DataFrame({"a": [0.0, 5.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [1.0]
+
+    def test_just_below_min_excluded(self):
+        df = pl.DataFrame({"a": [-0.001]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    def test_just_above_max_excluded(self):
+        df = pl.DataFrame({"a": [5.001]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    def test_negative_interval(self):
+        df = pl.DataFrame({"a": [-10.0, -5.0, 0.0, 5.0]})
+        result = interval_validity(df, ["a"], -8.0, -2.0, "s")
+        assert result["interval_percent"].to_list() == [0.25]
+
+    def test_nulls_are_not_counted_as_matches(self):
+        df = pl.DataFrame({"a": [1.0, None, 2.0, None]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        # 2 matchs / 4 lignes
+        assert result["interval_percent"].to_list() == [0.5]
+
+    def test_all_nulls_gives_zero(self):
+        df = pl.DataFrame({"a": pl.Series([None, None], dtype=pl.Float64)})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    def test_multiple_columns(self):
+        df = pl.DataFrame(
+            {
+                "a": [1.0, 2.0, 3.0, 4.0],
+                "b": [1.0, 100.0, 2.0, 100.0],
+                "c": [0.0, 0.0, 0.0, 0.0],
+            }
+        )
+        result = interval_validity(df, ["a", "b", "c"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [1.0, 0.5, 1.0]
+
+    def test_column_order_is_preserved(self):
+        df = pl.DataFrame({"a": [1.0], "b": [1.0], "c": [1.0]})
+        result = interval_validity(df, ["c", "a"], 0.0, 5.0, "s")
+        assert result["column_name"].to_list() == ["c", "a"]
+
+    def test_output_height_matches_columns(self):
+        df = pl.DataFrame({"a": [1.0], "b": [1.0], "c": [1.0]})
+        result = interval_validity(df, ["a", "b", "c"], 0.0, 5.0, "s")
+        assert result.height == 3
+
+    def test_different_columns_different_results(self):
+        df = pl.DataFrame(
+            {
+                "a": [1.0, 1.0, 1.0, 1.0],
+                "b": [10.0, 10.0, 10.0, 10.0],
+            }
+        )
+        result = interval_validity(df, ["a", "b"], 0.0, 5.0, "s")
+        assert result["interval_percent"].to_list() == [1.0, 0.0]
+
+    def test_output_columns(self):
+        df = pl.DataFrame({"a": [1.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result.columns == [
+            "source",
+            "column_name",
+            "interval_percent",
+            "timestamp",
+        ]
+
+    def test_source_is_broadcast_on_every_row(self):
+        df = pl.DataFrame({"a": [1.0], "b": [1.0], "c": [1.0]})
+        result = interval_validity(df, ["a", "b", "c"], 0.0, 5.0, "my-source")
+        assert result["source"].to_list() == ["my-source"] * 3
+
+    def test_empty_source_string(self):
+        df = pl.DataFrame({"a": [1.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "")
+        assert result["source"].to_list() == [""]
+
+    def test_interval_percent_dtype_is_float64(self):
+        df = pl.DataFrame({"a": [1.0, 100.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        assert result["interval_percent"].dtype == pl.Float64
+
+    def test_timestamp_is_timezone_aware_utc(self):
+        df = pl.DataFrame({"a": [1.0]})
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        ts = result["timestamp"][0]
+        assert ts.tzinfo is not None
+        assert ts.utcoffset() == timedelta(0)
+
+    def test_timestamp_is_recent(self):
+        df = pl.DataFrame({"a": [1.0]})
+        before = datetime.now(ZoneInfo("UTC")) - timedelta(seconds=1)
+        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        after = datetime.now(ZoneInfo("UTC")) + timedelta(seconds=1)
+        ts = result["timestamp"][0]
+        assert before <= ts <= after
+
+    def test_timestamp_is_identical_for_all_rows(self):
+        df = pl.DataFrame({"a": [1.0], "b": [1.0]})
+        result = interval_validity(df, ["a", "b"], 0.0, 5.0, "s")
+        ts = result["timestamp"].to_list()
+        assert ts[0] == ts[1]
+
+    def test_min_equal_max(self):
+        df = pl.DataFrame({"a": [3.0, 3.0, 4.0]})
+        result = interval_validity(df, ["a"], 3.0, 3.0, "s")
+        assert result["interval_percent"].to_list() == [pytest.approx(2 / 3)]
+
+    def test_min_greater_than_max_gives_zero(self):
+        df = pl.DataFrame({"a": [1.0, 2.0, 3.0]})
+        result = interval_validity(df, ["a"], 5.0, 0.0, "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    def test_float_precision(self):
+        df = pl.DataFrame({"a": [0.1, 0.2, 0.3]})
+        result = interval_validity(df, ["a"], 0.0, 0.25, "s")
+        assert result["interval_percent"].to_list() == pytest.approx([2 / 3])
+
+    def test_integer_dataframe(self):
+        df = pl.DataFrame({"a": [1, 2, 3, 4]})
+        result = interval_validity(df, ["a"], 2, 3, "s")
+        assert result["interval_percent"].to_list() == [0.5]
