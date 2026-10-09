@@ -1,10 +1,11 @@
-from datetime import UTC
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import polars as pl
 import pytest
 from polars import DataFrame
 
-from metrics.conformite import text_format
+from metrics.conformite import label_set, text_format
 
 EMAIL_REGEX = r"^[\w.+-]+@[\w-]+\.[\w.-]+$"
 CODE_POSTAL_FR_REGEX = r"^(0[1-9]|[1-8]\d|9[0-5])\d{3}$"
@@ -210,3 +211,109 @@ class TestConformiteTextFormat:
             "format_percent",
             "timestamp",
         }
+
+
+class TestConformiteLabels:
+    def test_basic_percentages(self):
+        df = pl.DataFrame(
+            {
+                "a": ["x", "y", "x", "z"],
+                "b": ["y", "y", "w", "x"],
+            }
+        )
+        result = label_set(df, columns=["a", "b"], labels=["x", "y"], source="src")
+
+        assert result["column_name"].to_list() == ["a", "b"]
+        assert result["labels_percent"].to_list() == [0.75, 0.75]
+
+    def test_all_values_match(self):
+        df = pl.DataFrame({"a": ["x", "x", "x"]})
+        result = label_set(df, ["a"], ["x"], "s")
+        assert result["labels_percent"].to_list() == [1.0]
+
+    def test_no_value_matches(self):
+        df = pl.DataFrame({"a": ["x", "y", "z"]})
+        result = label_set(df, ["a"], ["w"], "s")
+        assert result["labels_percent"].to_list() == [0.0]
+
+    def test_single_row(self):
+        df = pl.DataFrame({"a": ["x"]})
+        result = label_set(df, ["a"], ["x"], "s")
+        assert result["labels_percent"].to_list() == [1.0]
+
+    def test_multiple_labels(self):
+        df = pl.DataFrame({"a": ["cat", "dog", "bird", "fish"]})
+        result = label_set(df, ["a"], ["cat", "dog", "bird"], "s")
+        assert result["labels_percent"].to_list() == [0.75]
+
+    def test_nulls_are_not_counted_as_labels(self):
+        df = pl.DataFrame({"a": ["x", None, "y", None]})
+        result = label_set(df, ["a"], ["x", "y"], "s")
+        # 2 matchs sur 4 lignes
+        assert result["labels_percent"].to_list() == [0.5]
+
+    def test_all_nulls_gives_zero(self):
+        df = pl.DataFrame({"a": pl.Series([None, None], dtype=pl.String)})
+        result = label_set(df, ["a"], ["x"], "s")
+        assert result["labels_percent"].to_list() == [0.0]
+
+    def test_output_columns(self):
+        df = pl.DataFrame({"a": ["x"]})
+        result = label_set(df, ["a"], ["x"], "s")
+        assert result.columns == [
+            "source",
+            "column_name",
+            "labels_percent",
+            "timestamp",
+        ]
+
+    def test_output_height_matches_columns(self):
+        df = pl.DataFrame({"a": ["x"], "b": ["y"], "c": ["z"]})
+        result = label_set(df, ["a", "b", "c"], ["x"], "s")
+        assert result.height == 3
+
+    def test_column_order_is_preserved(self):
+        df = pl.DataFrame({"a": ["x"], "b": ["x"], "c": ["x"]})
+        result = label_set(df, ["c", "a"], ["x"], "s")
+        assert result["column_name"].to_list() == ["c", "a"]
+
+    def test_source_is_broadcast_on_every_row(self):
+        df = pl.DataFrame({"a": ["x"], "b": ["y"], "c": ["z"]})
+        result = label_set(df, ["a", "b", "c"], ["x"], "my-source")
+        assert result["source"].to_list() == ["my-source"] * 3
+
+    def test_empty_source_string(self):
+        df = pl.DataFrame({"a": ["x"]})
+        result = label_set(df, ["a"], ["x"], "")
+        assert result["source"].to_list() == [""]
+
+    def test_labels_percent_dtype_is_float64(self):
+        df = pl.DataFrame({"a": ["x", "y"]})
+        result = label_set(df, ["a"], ["x"], "s")
+        assert result["labels_percent"].dtype == pl.Float64
+
+    def test_timestamp_is_timezone_aware_utc(self):
+        df = pl.DataFrame({"a": ["x"]})
+        result = label_set(df, ["a"], ["x"], "s")
+        ts = result["timestamp"][0]
+        assert ts.tzinfo is not None
+        assert ts.utcoffset() == timedelta(0)
+
+    def test_timestamp_is_recent(self):
+        df = pl.DataFrame({"a": ["x"]})
+        before = datetime.now(ZoneInfo("UTC")) - timedelta(seconds=1)
+        result = label_set(df, ["a"], ["x"], "s")
+        after = datetime.now(ZoneInfo("UTC")) + timedelta(seconds=1)
+        ts = result["timestamp"][0]
+        assert before <= ts <= after
+
+    def test_timestamp_is_identical_for_all_rows(self):
+        df = pl.DataFrame({"a": ["x"], "b": ["y"]})
+        result = label_set(df, ["a", "b"], ["x"], "s")
+        ts = result["timestamp"].to_list()
+        assert ts[0] == ts[1]
+
+    def test_empty_labels_list_gives_zero(self):
+        df = pl.DataFrame({"a": ["x", "y"]})
+        result = label_set(df, ["a"], [], "s")
+        assert result["labels_percent"].to_list() == [0.0]
