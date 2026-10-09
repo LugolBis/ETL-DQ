@@ -1,4 +1,6 @@
-from typing import Any, Callable
+from collections.abc import Callable
+from functools import lru_cache
+from typing import Any
 
 import Levenshtein
 import numpy as np
@@ -6,7 +8,6 @@ import polars as pl
 from numpy import ndarray
 from polars import DataFrame, Series
 from sklearn.manifold import TSNE
-from functools import lru_cache
 
 
 def filter_rel(df: DataFrame, seuil_completude: float = 0.8) -> DataFrame:
@@ -118,9 +119,9 @@ def _global_stats(df_encoded: DataFrame, x: str):
 
 def _grouped_stats(df_encoded: DataFrame, x: str, y: str):
     dtype = df_encoded.schema[x]
-    
+
     if isinstance(dtype, pl.Array):
-        g= df_encoded.group_by(y).agg(pl.col(x).drop_nulls())
+        g = df_encoded.group_by(y).agg(pl.col(x).drop_nulls())
         N, mu, var = [], [], []
         for v in g[x]:
             m = np.array(v)
@@ -134,7 +135,7 @@ def _grouped_stats(df_encoded: DataFrame, x: str, y: str):
             mu.append(mu_g)
             var.append(var_g)
         return np.array(N), np.array(mu), np.array(var)
-    
+
     agg = df_encoded.group_by(y).agg(
         [
             pl.col(x).count().alias("N"),
@@ -147,7 +148,9 @@ def _grouped_stats(df_encoded: DataFrame, x: str, y: str):
 
 
 def analyze_grouped_distribution(
-    df: DataFrame, seuil_completude: float = 0.8, encoder: Callable[[DataFrame], DataFrame] = encode_proj_rel
+    df: DataFrame,
+    seuil_completude: float = 0.8,
+    encoder: Callable[[DataFrame], DataFrame] = encode_proj_rel,
 ) -> DataFrame:
     df_filtered = filter_rel(df, seuil_completude)
     df_encoded = encoder(encode_num_rel(df_filtered))
@@ -218,7 +221,11 @@ def encode_proj_rel_slm(df, model_name="intfloat/multilingual-e5-small"):
         mapping = dict(zip(labels.to_list(), embeddings))
         df = df.with_columns(
             pl.col(col_name)
-            .replace_strict(mapping, default=None, return_dtype=pl.Array(pl.Float64, embeddings.shape[1]))
+            .replace_strict(
+                mapping,
+                default=None,
+                return_dtype=pl.Array(pl.Float64, embeddings.shape[1]),
+            )
             .alias(col_name)
         )
 
