@@ -4,7 +4,9 @@ import pendulum
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 
+from orchestration.dags.cfg.coherence import COHRENCE_CFG
 from orchestration.dags.cfg.completude import COMPLETUDE_CFG
+from orchestration.tasks.data_quality.coherence import coherence_assessment
 from orchestration.tasks.data_quality.completude import completude_assessment
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.models import DfWriter
@@ -31,7 +33,11 @@ def data_quality_assessment():
         DfWriter(DQ_DIR / "completude.parquet", FileType.PARQUET),
     )
 
-    start >> task_completude >> end
+    task_coherence = coherence_assessment(
+        COHRENCE_CFG, DATA_DIR, DfWriter(DQ_DIR / "coherence.parquet", FileType.PARQUET)
+    )
+
+    start >> [task_completude, task_coherence] >> end
 
 
 dag_instance = data_quality_assessment()
