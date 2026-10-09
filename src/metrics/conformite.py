@@ -70,3 +70,40 @@ def interval_validity(
         (pl.col("match_count") / n).alias("interval_percent"),
         pl.lit(timestamp).alias("timestamp"),
     )
+
+
+def foreign_key_validity(
+    df1: DataFrame,
+    df2: DataFrame,
+    columns: list[tuple[str, str]],
+    sources: tuple[str, str],
+) -> DataFrame:
+    """
+    We check the percent of values for the `columns` pairs, in the `df1` that are included in the `df2`.
+    Note that `columns` is a list of pair of columns, the first one refer to a coluln of `df1` (and the second one to `df2`).
+    """
+
+    n = df1.height
+    timestamp = datetime.now(ZoneInfo("UTC"))
+    src1, src2 = sources
+
+    result = pl.concat(
+        [
+            df1.select(pl.col(col1).alias("value"))
+            .join(
+                df2.select(pl.col(col2).alias("value")).unique(),
+                on="value",
+                how="semi",
+            )
+            .select(
+                pl.lit(src1).alias("source_1"),
+                pl.lit(src2).alias("source_2"),
+                pl.lit(col1).alias("column_1"),
+                pl.lit(col2).alias("column_2"),
+                (pl.len() / n).alias("fk_percent"),
+            )
+            for col1, col2 in columns
+        ]
+    )
+
+    return result.with_columns(pl.lit(timestamp).alias("timestamp"))

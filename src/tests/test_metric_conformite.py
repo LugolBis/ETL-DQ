@@ -5,7 +5,12 @@ import polars as pl
 import pytest
 from polars import DataFrame
 
-from metrics.conformite import interval_validity, label_set, text_format
+from metrics.conformite import (
+    foreign_key_validity,
+    interval_validity,
+    label_set,
+    text_format,
+)
 
 EMAIL_REGEX = r"^[\w.+-]+@[\w-]+\.[\w.-]+$"
 CODE_POSTAL_FR_REGEX = r"^(0[1-9]|[1-8]\d|9[0-5])\d{3}$"
@@ -482,3 +487,248 @@ class TestConformiteInterval:
         df = pl.DataFrame({"a": [1, 2, 3, 4]})
         result = interval_validity(df, ["a"], 2, 3, "s")
         assert result["interval_percent"].to_list() == [0.5]
+
+
+class TestConformiteFK:
+    def test_all_values_included(self):
+        df1 = pl.DataFrame({"a": ["x", "y", "z"]})
+        df2 = pl.DataFrame({"b": ["x", "y", "z", "w"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [1.0]
+
+    def test_no_value_included(self):
+        df1 = pl.DataFrame({"a": ["x", "y"]})
+        df2 = pl.DataFrame({"b": ["p", "q"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.0]
+
+    def test_partial_inclusion(self):
+        df1 = pl.DataFrame({"a": ["x", "y", "z", "w"]})
+        df2 = pl.DataFrame({"b": ["x", "y"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.5]
+
+    def test_single_value_match(self):
+        df1 = pl.DataFrame({"a": ["x"]})
+        df2 = pl.DataFrame({"b": ["x"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [1.0]
+
+    def test_single_value_no_match(self):
+        df1 = pl.DataFrame({"a": ["x"]})
+        df2 = pl.DataFrame({"b": ["y"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.0]
+
+    def test_numeric_values(self):
+        df1 = pl.DataFrame({"a": [1, 2, 3, 4]})
+        df2 = pl.DataFrame({"b": [1, 2]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.5]
+
+    def test_float_values(self):
+        df1 = pl.DataFrame({"a": [1.0, 2.0, 3.0]})
+        df2 = pl.DataFrame({"b": [1.5, 2.0]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == pytest.approx([1 / 3])
+
+    # Doublons
+
+    def test_duplicates_in_df1_counted_separately(self):
+        df1 = pl.DataFrame({"a": ["x", "x", "y"]})
+        df2 = pl.DataFrame({"b": ["x"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        # "x" apparaît 2 fois dans df1 → 2/3
+        assert result["fk_percent"].to_list() == pytest.approx([2 / 3])
+
+    def test_duplicates_in_df2_do_not_change_result(self):
+        df1 = pl.DataFrame({"a": ["x", "y"]})
+        df2 = pl.DataFrame({"b": ["x", "x", "x"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.5]
+
+    def test_nulls_in_df1_not_counted_as_match(self):
+        df1 = pl.DataFrame({"a": ["x", None, "y", None]})
+        df2 = pl.DataFrame({"b": ["x", "y"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        # 2 matchs / 4 lignes
+        assert result["fk_percent"].to_list() == [0.5]
+
+    def test_nulls_in_df2_not_matched(self):
+        df1 = pl.DataFrame({"a": ["x", "y"]})
+        df2 = pl.DataFrame({"b": ["x", None]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.5]
+
+    def test_all_nulls_df1(self):
+        df1 = pl.DataFrame({"a": pl.Series([None, None], dtype=pl.String)})
+        df2 = pl.DataFrame({"b": ["x"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.0]
+
+    def test_multiple_pairs(self):
+        df1 = pl.DataFrame(
+            {
+                "a": ["x", "y", "z", "w"],
+                "b": [1, 2, 3, 4],
+                "c": ["p", "q", "r", "s"],
+            }
+        )
+        df2 = pl.DataFrame(
+            {
+                "x": ["x", "y"],
+                "y": [1, 2],
+                "z": [
+                    "p",
+                    "q",
+                ],
+            }
+        )
+        result = foreign_key_validity(
+            df1,
+            df2,
+            [("a", "x"), ("b", "y"), ("c", "z")],
+            ("s1", "s2"),
+        )
+        assert result["fk_percent"].to_list() == [0.5, 0.5, 0.5]
+
+    def test_pair_order_is_preserved(self):
+        df1 = pl.DataFrame({"a": ["x"], "b": ["y"], "c": ["z"]})
+        df2 = pl.DataFrame({"x": ["x"], "y": ["y"], "z": ["z"]})
+        result = foreign_key_validity(
+            df1,
+            df2,
+            [("c", "z"), ("a", "x"), ("b", "y")],
+            ("s1", "s2"),
+        )
+        assert result["column_1"].to_list() == ["c", "a", "b"]
+        assert result["column_2"].to_list() == ["z", "x", "y"]
+
+    def test_output_height_matches_columns(self):
+        df1 = pl.DataFrame({"a": ["x"], "b": ["y"], "c": ["z"]})
+        df2 = pl.DataFrame({"x": ["x"], "y": ["y"], "z": ["z"]})
+        result = foreign_key_validity(
+            df1,
+            df2,
+            [("a", "x"), ("b", "y"), ("c", "z")],
+            ("s1", "s2"),
+        )
+        assert result.height == 3
+
+    def test_same_column_names_in_df1_and_df2(self):
+        df1 = pl.DataFrame({"a": ["x", "y"]})
+        df2 = pl.DataFrame({"a": ["x"]})
+        result = foreign_key_validity(df1, df2, [("a", "a")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.5]
+
+    def test_denominator_is_df1_height_for_every_pair(self):
+        # Les colonnes ont des longueurs identiques (même df1),
+        # donc le dénominateur ne doit pas changer selon la colonne.
+        df1 = pl.DataFrame({"a": ["x", "x", "y", "y"]})
+        df2 = pl.DataFrame({"x": ["x"], "y": ["y"]})
+        result = foreign_key_validity(
+            df1,
+            df2,
+            [("a", "x"), ("a", "y")],
+            ("s1", "s2"),
+        )
+        assert result["fk_percent"].to_list() == [0.5, 0.5]
+
+    # Structure de la sortie
+
+    def test_output_columns(self):
+        df1 = pl.DataFrame({"a": ["x"]})
+        df2 = pl.DataFrame({"b": ["x"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result.columns == [
+            "source_1",
+            "source_2",
+            "column_1",
+            "column_2",
+            "fk_percent",
+            "timestamp",
+        ]
+
+    def test_sources_are_broadcast(self):
+        df1 = pl.DataFrame({"a": ["x"], "b": ["x"], "c": ["x"]})
+        df2 = pl.DataFrame({"x": ["x"], "y": ["x"], "z": ["x"]})
+        result = foreign_key_validity(
+            df1,
+            df2,
+            [("a", "x"), ("b", "y"), ("c", "z")],
+            ("srcA", "srcB"),
+        )
+        assert result["source_1"].to_list() == ["srcA"] * 3
+        assert result["source_2"].to_list() == ["srcB"] * 3
+
+    def test_column_names_are_preserved_in_output(self):
+        df1 = pl.DataFrame({"foo": ["x"]})
+        df2 = pl.DataFrame({"bar": ["x"]})
+        result = foreign_key_validity(df1, df2, [("foo", "bar")], ("s1", "s2"))
+        assert result["column_1"].to_list() == ["foo"]
+        assert result["column_2"].to_list() == ["bar"]
+
+    def test_empty_source_strings(self):
+        df1 = pl.DataFrame({"a": ["x"]})
+        df2 = pl.DataFrame({"b": ["x"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("", ""))
+        assert result["source_1"].to_list() == [""]
+        assert result["source_2"].to_list() == [""]
+
+    def test_match_proportion_dtype_is_float64(self):
+        df1 = pl.DataFrame({"a": ["x"]})
+        df2 = pl.DataFrame({"b": ["x"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].dtype == pl.Float64
+
+    # Timestamp
+
+    def test_timestamp_is_timezone_aware_utc(self):
+        df1 = pl.DataFrame({"a": ["x"]})
+        df2 = pl.DataFrame({"b": ["x"]})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        ts = result["timestamp"][0]
+        assert ts.tzinfo is not None
+        assert ts.utcoffset() == timedelta(0)
+
+    def test_timestamp_is_recent(self):
+        df1 = pl.DataFrame({"a": ["x"]})
+        df2 = pl.DataFrame({"b": ["x"]})
+        before = datetime.now(ZoneInfo("UTC")) - timedelta(seconds=1)
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        after = datetime.now(ZoneInfo("UTC")) + timedelta(seconds=1)
+        ts = result["timestamp"][0]
+        assert before <= ts <= after
+
+    def test_timestamp_is_identical_for_all_rows(self):
+        df1 = pl.DataFrame({"a": ["x"], "b": ["x"]})
+        df2 = pl.DataFrame({"x": ["x"], "y": ["x"]})
+        result = foreign_key_validity(
+            df1,
+            df2,
+            [("a", "x"), ("b", "y")],
+            ("s1", "s2"),
+        )
+        ts = result["timestamp"].to_list()
+        assert ts[0] == ts[1]
+
+    # Cas limites
+
+    def test_empty_df2_gives_zero(self):
+        df1 = pl.DataFrame({"a": ["x", "y"]})
+        df2 = pl.DataFrame({"b": pl.Series([], dtype=pl.String)})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.0]
+
+    def test_df2_with_only_nulls(self):
+        df1 = pl.DataFrame({"a": ["x", "y"]})
+        df2 = pl.DataFrame({"b": pl.Series([None, None], dtype=pl.String)})
+        result = foreign_key_validity(df1, df2, [("a", "b")], ("s1", "s2"))
+        assert result["fk_percent"].to_list() == [0.0]
+
+    def test_no_columns_raises_on_concat(self):
+        # pl.concat([]) lève une erreur : la liste de paires ne peut pas être vide.
+        df1 = pl.DataFrame({"a": ["x"]})
+        df2 = pl.DataFrame({"b": ["x"]})
+        with pytest.raises(Exception):
+            foreign_key_validity(df1, df2, [], ("s1", "s2"))
