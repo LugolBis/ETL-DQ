@@ -53,17 +53,34 @@ def heterogeneite_assessment(
     print(f"Ratio de position : {rp:.6f}")
     print("===============================================")
 
-    # 6. Enregistrer les resultats
+    # 6. Enregistrer les resultats avec source et column_name
     timestamp = datetime.now(timezone.utc)
 
     resultats = pl.DataFrame({
+        "source": [
+            "consommation1",
+            "consommation2",
+            "consommation1_vs_2",
+            "csp3",
+        ],
+        "column_name": [
+            "NB_KW_Jour",
+            "NB_KW_Jour",
+            "NB_KW_Jour",
+            "Salaire_Moyen",
+        ],
         "metric": [
-            "CV_consommation1",
-            "CV_consommation2",
+            "CV",
+            "CV",
             "difference_dispersion",
             "ratio_position",
         ],
-        "value": [cv1, cv2, difference, rp],
+        "value": [
+            cv1,
+            cv2,
+            difference,
+            rp,
+        ],
         "timestamp": [timestamp] * 4,
     })
 

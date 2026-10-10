@@ -4,9 +4,15 @@ import math
 import polars as pl
 
 
-def calculer_cv(df: pl.DataFrame) -> float:
-    moyenne = df["NB_KW_Jour"].mean()
-    ecart_type = df["NB_KW_Jour"].std()
+def calculer_cv(
+    df: pl.DataFrame,
+    colonne: str = "NB_KW_Jour",
+) -> float:
+    if colonne not in df.columns:
+        raise ValueError(f"Colonne manquante : {colonne}")
+
+    moyenne = df[colonne].mean()
+    ecart_type = df[colonne].std()
 
     if moyenne is None or ecart_type is None or moyenne == 0:
         raise ValueError(
@@ -28,8 +34,20 @@ def calculer_difference_dispersion(
     return abs(math.log(cv_evry / cv_paris))
 
 
-def calculer_ratio_position(df: pl.DataFrame) -> float:
-    colonnes = ["Salaire_Min", "Salaire_Moyen", "Salaire_Max"]
+def calculer_ratio_position(
+    df: pl.DataFrame,
+    colonne_min: str = "Salaire_Min",
+    colonne_moyen: str = "Salaire_Moyen",
+    colonne_max: str = "Salaire_Max",
+    seuil_min: float = 0.1,
+    seuil_max: float = 0.9,
+) -> float:
+    if not 0 <= seuil_min < seuil_max <= 1:
+        raise ValueError(
+            "Les seuils doivent verifier 0 <= seuil_min < seuil_max <= 1"
+        )
+
+    colonnes = [colonne_min, colonne_moyen, colonne_max]
 
     if df.is_empty():
         raise ValueError("Le tableau est vide")
@@ -37,9 +55,9 @@ def calculer_ratio_position(df: pl.DataFrame) -> float:
     if any(col not in df.columns for col in colonnes):
         raise ValueError("Colonnes de salaire manquantes")
 
-    min_s = pl.col("Salaire_Min")
-    moy_s = pl.col("Salaire_Moyen")
-    max_s = pl.col("Salaire_Max")
+    min_s = pl.col(colonne_min)
+    moy_s = pl.col(colonne_moyen)
+    max_s = pl.col(colonne_max)
 
     valides = (
         min_s.is_not_null()
@@ -59,7 +77,7 @@ def calculer_ratio_position(df: pl.DataFrame) -> float:
 
     return ratios.select(
         (
-            (pl.col("ratio") < 0.1)
-            | (pl.col("ratio") > 0.9)
+            (pl.col("ratio") < seuil_min)
+            | (pl.col("ratio") > seuil_max)
         ).mean()
     ).item()
