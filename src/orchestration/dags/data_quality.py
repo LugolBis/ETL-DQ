@@ -12,11 +12,13 @@ from orchestration.dags.cfg.conformite import (
     CONFORMITE_INTERVAL_CFG,
     CONFORMITE_LABEL_CFG,
 )
+from orchestration.dags.cfg.unicite import UNICITE_CFG
 from orchestration.tasks.data_quality.coherence import coherence_assessment
 from orchestration.tasks.data_quality.completude import completude_assessment
 from orchestration.tasks.data_quality.conformite import (
     conformite_assessment,
 )
+from orchestration.tasks.data_quality.unicite import unicite_assessment
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.models import DfWriter
 
@@ -62,7 +64,11 @@ def data_quality_assessment():
         ),
     )
 
-    start >> [task_completude, task_coherence, task_grp_conformite] >> end
+    task_unicite = unicite_assessment(
+        UNICITE_CFG, 
+        DATA_DIR, DfWriter(DQ_DIR / "unicite.parquet", FileType.PARQUET),
+    )
 
+    start >> [task_completude, task_coherence, task_grp_conformite, task_unicite] >> end
 
 dag_instance = data_quality_assessment()
