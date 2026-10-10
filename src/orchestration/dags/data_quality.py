@@ -6,8 +6,17 @@ from airflow.sdk import dag
 
 from orchestration.dags.cfg.coherence import COHRENCE_CFG
 from orchestration.dags.cfg.completude import COMPLETUDE_CFG
+from orchestration.dags.cfg.conformite import (
+    CONFORMITE_FK_CFG,
+    CONFORMITE_FMT_CFG,
+    CONFORMITE_INTERVAL_CFG,
+    CONFORMITE_LABEL_CFG,
+)
 from orchestration.tasks.data_quality.coherence import coherence_assessment
 from orchestration.tasks.data_quality.completude import completude_assessment
+from orchestration.tasks.data_quality.conformite import (
+    conformite_assessment,
+)
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.models import DfWriter
 
@@ -37,7 +46,23 @@ def data_quality_assessment():
         COHRENCE_CFG, DATA_DIR, DfWriter(DQ_DIR / "coherence.parquet", FileType.PARQUET)
     )
 
-    start >> [task_completude, task_coherence] >> end
+    task_grp_conformite = conformite_assessment(
+        (
+            CONFORMITE_FMT_CFG,
+            CONFORMITE_LABEL_CFG,
+            CONFORMITE_INTERVAL_CFG,
+            CONFORMITE_FK_CFG,
+        ),
+        DATA_DIR,
+        (
+            DfWriter(DQ_DIR / "conformite_fmt.parquet", FileType.PARQUET),
+            DfWriter(DQ_DIR / "conformite_label.parquet", FileType.PARQUET),
+            DfWriter(DQ_DIR / "conformite_interval.parquet", FileType.PARQUET),
+            DfWriter(DQ_DIR / "conformite_fk.parquet", FileType.PARQUET),
+        ),
+    )
+
+    start >> [task_completude, task_coherence, task_grp_conformite] >> end
 
 
 dag_instance = data_quality_assessment()
