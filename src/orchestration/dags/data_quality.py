@@ -20,6 +20,7 @@ from orchestration.tasks.data_quality.conformite import (
 )
 from orchestration.tasks.data_quality.unicite import unicite_assessment
 from orchestration.tasks.enums import FileType
+from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.models import DfWriter
 
 DATA_DIR = Path("/opt/airflow/.data")
@@ -33,10 +34,21 @@ DQ_DIR = DATA_DIR / "data_quality"
     tags=["Data Quality", "Qualité de données", "DQ metrics", "DQ assessment"],
 )
 def data_quality_assessment():
-    # For now we suppose here that sources are already extracted
-
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
+
+    # We use transitives dependencies to cover all of the dependencies with a min `sources_deps`
+    sources_deps = (
+        (
+            "consommation_csp",
+            [DATA_DIR / "Consommation_CSP.parquet"],
+        ),
+        (
+            "consommation_iris_evry",
+            [DATA_DIR / "Consommation_IRIS_Evry.parquet"],
+        ),
+        ("consommation_iris_paris", [DATA_DIR / "Consommation_IRIS_Paris.parquet"]),
+    )
 
     task_completude = completude_assessment(
         COMPLETUDE_CFG,
@@ -65,10 +77,20 @@ def data_quality_assessment():
     )
 
     task_unicite = unicite_assessment(
-        UNICITE_CFG, 
-        DATA_DIR, DfWriter(DQ_DIR / "unicite.parquet", FileType.PARQUET),
+        UNICITE_CFG,
+        DATA_DIR,
+        DfWriter(DQ_DIR / "unicite.parquet", FileType.PARQUET),
     )
 
-    start >> [task_completude, task_coherence, task_grp_conformite, task_unicite] >> end
+    # Tasks chaining - HITL
+    for source_id, file_paths in sources_deps:
+        (
+            start
+            >> ensure_extracted(source_id, file_paths)
+            >> [task_completude, task_coherence, task_grp_conformite, task_unicite]
+        )
+
+    [task_completude, task_coherence, task_grp_conformite, task_unicite] >> end
+
 
 dag_instance = data_quality_assessment()
