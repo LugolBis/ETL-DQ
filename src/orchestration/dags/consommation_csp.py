@@ -37,20 +37,20 @@ def consommation_csp():
 
     sources_deps = (
         (
-            1,
+            "extract_source1",
             [
                 DATA_DIR / "population1.parquet",
                 DATA_DIR / "consommation1.parquet",
             ],
         ),
         (
-            2,
+            "extract_source2",
             [
                 DATA_DIR / "population2.parquet",
                 DATA_DIR / "consommation2.parquet",
             ],
         ),
-        (3, [DATA_DIR / "csp3.parquet"]),
+        ("extract_source3", [DATA_DIR / "csp3.parquet"]),
     )
 
     fn_join_pop_conso: Callable[[DataFrame, DataFrame], DataFrame] = (

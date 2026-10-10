@@ -32,8 +32,8 @@ def consommation_iris_paris():
     end = EmptyOperator(task_id="end")
 
     sources_deps = (
-        (1, [DATA_DIR / "consommation1.parquet"]),
-        (4, [DATA_DIR / "iris4.parquet"]),
+        ("extract_source1", [DATA_DIR / "consommation1.parquet"]),
+        ("extract_source4", [DATA_DIR / "iris4.parquet"]),
     )
 
     df_readers = [

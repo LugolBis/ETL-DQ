@@ -32,8 +32,8 @@ def consommation_iris_evry():
     end = EmptyOperator(task_id="end")
 
     sources_deps = (
-        (2, [DATA_DIR / "consommation2.parquet"]),
-        (4, [DATA_DIR / "iris4.parquet"]),
+        ("extract_source2", [DATA_DIR / "consommation2.parquet"]),
+        ("extract_source4", [DATA_DIR / "iris4.parquet"]),
     )
 
     df_readers = [
