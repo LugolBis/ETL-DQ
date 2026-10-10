@@ -325,167 +325,288 @@ class TestConformiteLabels:
 
 
 class TestConformiteInterval:
-    def test_all_values_in_interval(self):
-        df = pl.DataFrame({"a": [1.0, 2.0, 3.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [1.0]
+    # Cas de base : tous valides / aucun valide / partiel
 
-    def test_no_value_in_interval(self):
-        df = pl.DataFrame({"a": [10.0, 20.0, 30.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+    def test_all_values_respect_constraint(self):
+        df = pl.DataFrame({"a": [1, 2, 3], "b": [2, 3, 4], "c": [3, 4, 5]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
         assert result["interval_percent"].to_list() == [0.0]
 
-    def test_partial_match(self):
-        df = pl.DataFrame({"a": [1.0, 2.0, 100.0, 3.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [0.75]
-
-    def test_single_value_in_interval(self):
-        df = pl.DataFrame({"a": [3.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+    def test_no_value_respects_constraint(self):
+        df = pl.DataFrame({"a": [3, 4, 5], "b": [2, 3, 4], "c": [1, 2, 3]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
         assert result["interval_percent"].to_list() == [1.0]
 
-    def test_single_value_out_of_interval(self):
-        df = pl.DataFrame({"a": [10.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [0.0]
-
-    def test_min_bound_is_inclusive(self):
-        df = pl.DataFrame({"a": [0.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [1.0]
-
-    def test_max_bound_is_inclusive(self):
-        df = pl.DataFrame({"a": [5.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [1.0]
-
-    def test_both_bounds_inclusive(self):
-        df = pl.DataFrame({"a": [0.0, 5.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [1.0]
-
-    def test_just_below_min_excluded(self):
-        df = pl.DataFrame({"a": [-0.001]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [0.0]
-
-    def test_just_above_max_excluded(self):
-        df = pl.DataFrame({"a": [5.001]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [0.0]
-
-    def test_negative_interval(self):
-        df = pl.DataFrame({"a": [-10.0, -5.0, 0.0, 5.0]})
-        result = interval_validity(df, ["a"], -8.0, -2.0, "s")
+    def test_partial_violation(self):
+        # 3 lignes respectent, 1 viole
+        df = pl.DataFrame(
+            {
+                "a": [1, 1, 1, 5],
+                "b": [2, 2, 2, 2],
+                "c": [3, 3, 3, 3],
+            }
+        )
+        result = interval_validity(df, [("a", "b", "c")], "s")
         assert result["interval_percent"].to_list() == [0.25]
 
-    def test_nulls_are_not_counted_as_matches(self):
-        df = pl.DataFrame({"a": [1.0, None, 2.0, None]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
-        # 2 matchs / 4 lignes
-        assert result["interval_percent"].to_list() == [0.5]
+    # Cas à une seule ligne
 
-    def test_all_nulls_gives_zero(self):
-        df = pl.DataFrame({"a": pl.Series([None, None], dtype=pl.Float64)})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+    def test_single_valid_row(self):
+        df = pl.DataFrame({"a": [1], "b": [2], "c": [3]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
         assert result["interval_percent"].to_list() == [0.0]
 
-    def test_multiple_columns(self):
+    def test_single_invalid_row(self):
+        df = pl.DataFrame({"a": [3], "b": [2], "c": [1]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [1.0]
+
+    # Bornes inclusives (égalités autorisées)
+
+    def test_equality_at_all_levels_is_valid(self):
+        df = pl.DataFrame({"a": [3], "b": [3], "c": [3]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    def test_c0_equal_c1_is_valid(self):
+        df = pl.DataFrame({"a": [2], "b": [2], "c": [3]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    def test_c1_equal_c2_is_valid(self):
+        df = pl.DataFrame({"a": [1], "b": [2], "c": [2]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    # Violations légères (juste en dehors)
+
+    def test_just_above_b_invalid(self):
+        df = pl.DataFrame({"a": [2.0001], "b": [2.0], "c": [3.0]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [1.0]
+
+    def test_just_above_c_invalid(self):
+        df = pl.DataFrame({"a": [1.0], "b": [2.0001], "c": [2.0]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [1.0]
+
+    # Valeurs négatives
+
+    def test_negative_values_all_valid(self):
         df = pl.DataFrame(
             {
-                "a": [1.0, 2.0, 3.0, 4.0],
-                "b": [1.0, 100.0, 2.0, 100.0],
-                "c": [0.0, 0.0, 0.0, 0.0],
+                "a": [-10.0, -5.0, -3.0, -8.0],
+                "b": [-9.0, -4.0, -2.0, -7.0],
+                "c": [-8.0, -3.0, -1.0, -6.0],
             }
         )
-        result = interval_validity(df, ["a", "b", "c"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [1.0, 0.5, 1.0]
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [0.0]
 
-    def test_column_order_is_preserved(self):
-        df = pl.DataFrame({"a": [1.0], "b": [1.0], "c": [1.0]})
-        result = interval_validity(df, ["c", "a"], 0.0, 5.0, "s")
-        assert result["column_name"].to_list() == ["c", "a"]
+    def test_negative_values_all_invalid(self):
+        df = pl.DataFrame(
+            {
+                "a": [-8.0, -5.0],
+                "b": [-9.0, -4.0],
+                "c": [-10.0, -3.0],
+            }
+        )
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [0.5]
 
-    def test_output_height_matches_columns(self):
-        df = pl.DataFrame({"a": [1.0], "b": [1.0], "c": [1.0]})
-        result = interval_validity(df, ["a", "b", "c"], 0.0, 5.0, "s")
+    # Gestion des nulls
+
+    def test_nulls_are_not_counted_as_violations(self):
+        df = pl.DataFrame(
+            {
+                "a": [1.0, None, 3.0, None],
+                "b": [2.0, 2.0, 2.0, 2.0],
+                "c": [3.0, 3.0, None, None],
+            }
+        )
+        # Ligne 0 : 1 <= 2 <= 3 → valide
+        # Ligne 1 : a null → résultat null → non compté
+        # Ligne 2 : c null → résultat null → non compté
+        # Ligne 3 : a et c null → résultat null → non compté
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [0.25]
+
+    def test_all_nulls_gives_zero(self):
+        df = pl.DataFrame(
+            {
+                "a": pl.Series([None, None], dtype=pl.Float64),
+                "b": pl.Series([None, None], dtype=pl.Float64),
+                "c": pl.Series([None, None], dtype=pl.Float64),
+            }
+        )
+        result = interval_validity(df, [("a", "b", "c")], "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    # Plusieurs triplets
+
+    def test_multiple_triplets(self):
+        df = pl.DataFrame(
+            {
+                "a": [1, 1, 1, 1],
+                "b": [2, 2, 2, 2],
+                "c": [3, 3, 3, 3],
+                "d": [1, 5, 1, 5],
+                "e": [2, 2, 2, 2],
+                "f": [3, 3, 3, 3],
+            }
+        )
+        result = interval_validity(df, [("a", "b", "c"), ("d", "e", "f")], "s")
+        assert result["interval_percent"].to_list() == [0.0, 0.5]
+
+    def test_triplet_order_is_preserved(self):
+        df = pl.DataFrame(
+            {
+                "a": [1],
+                "b": [2],
+                "c": [3],
+                "d": [1],
+                "e": [2],
+                "f": [3],
+            }
+        )
+        result = interval_validity(df, [("d", "e", "f"), ("a", "b", "c")], "s")
+        assert result["column_name_min"].to_list() == ["d", "a"]
+        assert result["column_name_target"].to_list() == ["e", "b"]
+        assert result["column_name_max"].to_list() == ["f", "c"]
+
+    def test_output_height_matches_triplets(self):
+        df = pl.DataFrame(
+            {
+                "a": [1],
+                "b": [2],
+                "c": [3],
+                "d": [1],
+                "e": [2],
+                "f": [3],
+                "g": [1],
+                "h": [2],
+                "i": [3],
+            }
+        )
+        result = interval_validity(
+            df,
+            [("a", "b", "c"), ("d", "e", "f"), ("g", "h", "i")],
+            "s",
+        )
         assert result.height == 3
 
-    def test_different_columns_different_results(self):
+    def test_different_triplets_different_results(self):
         df = pl.DataFrame(
             {
-                "a": [1.0, 1.0, 1.0, 1.0],
-                "b": [10.0, 10.0, 10.0, 10.0],
+                "a": [1, 1, 1, 1],
+                "b": [2, 2, 2, 2],
+                "c": [3, 3, 3, 3],
+                "d": [5, 5, 5, 5],
+                "e": [2, 2, 2, 2],
+                "f": [3, 3, 3, 3],
             }
         )
-        result = interval_validity(df, ["a", "b"], 0.0, 5.0, "s")
-        assert result["interval_percent"].to_list() == [1.0, 0.0]
+        result = interval_validity(df, [("a", "b", "c"), ("d", "e", "f")], "s")
+        assert result["interval_percent"].to_list() == [0.0, 1.0]
+
+    def test_same_column_repeated_is_always_valid(self):
+        df = pl.DataFrame({"a": [1, 2, 3]})
+        result = interval_validity(df, [("a", "a", "a")], "s")
+        assert result["interval_percent"].to_list() == [0.0]
+
+    # Schéma / colonnes de sortie
 
     def test_output_columns(self):
-        df = pl.DataFrame({"a": [1.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        df = pl.DataFrame({"a": [1], "b": [2], "c": [3]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
         assert result.columns == [
             "source",
-            "column_name",
+            "column_name_min",
+            "column_name_target",
+            "column_name_max",
             "interval_percent",
             "timestamp",
         ]
 
     def test_source_is_broadcast_on_every_row(self):
-        df = pl.DataFrame({"a": [1.0], "b": [1.0], "c": [1.0]})
-        result = interval_validity(df, ["a", "b", "c"], 0.0, 5.0, "my-source")
-        assert result["source"].to_list() == ["my-source"] * 3
+        df = pl.DataFrame(
+            {
+                "a": [1],
+                "b": [2],
+                "c": [3],
+                "d": [1],
+                "e": [2],
+                "f": [3],
+            }
+        )
+        result = interval_validity(df, [("a", "b", "c"), ("d", "e", "f")], "my-source")
+        assert result["source"].to_list() == ["my-source"] * 2
 
     def test_empty_source_string(self):
-        df = pl.DataFrame({"a": [1.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "")
+        df = pl.DataFrame({"a": [1], "b": [2], "c": [3]})
+        result = interval_validity(df, [("a", "b", "c")], "")
         assert result["source"].to_list() == [""]
 
-    def test_interval_percent_dtype_is_float64(self):
-        df = pl.DataFrame({"a": [1.0, 100.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+    def test_invalid_percent_dtype_is_float64(self):
+        df = pl.DataFrame({"a": [1, 5], "b": [2, 2], "c": [3, 3]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
         assert result["interval_percent"].dtype == pl.Float64
 
+    # Horodatage
+
     def test_timestamp_is_timezone_aware_utc(self):
-        df = pl.DataFrame({"a": [1.0]})
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        df = pl.DataFrame({"a": [1], "b": [2], "c": [3]})
+        result = interval_validity(df, [("a", "b", "c")], "s")
         ts = result["timestamp"][0]
         assert ts.tzinfo is not None
         assert ts.utcoffset() == timedelta(0)
 
     def test_timestamp_is_recent(self):
-        df = pl.DataFrame({"a": [1.0]})
+        df = pl.DataFrame({"a": [1], "b": [2], "c": [3]})
         before = datetime.now(ZoneInfo("UTC")) - timedelta(seconds=1)
-        result = interval_validity(df, ["a"], 0.0, 5.0, "s")
+        result = interval_validity(df, [("a", "b", "c")], "s")
         after = datetime.now(ZoneInfo("UTC")) + timedelta(seconds=1)
         ts = result["timestamp"][0]
         assert before <= ts <= after
 
     def test_timestamp_is_identical_for_all_rows(self):
-        df = pl.DataFrame({"a": [1.0], "b": [1.0]})
-        result = interval_validity(df, ["a", "b"], 0.0, 5.0, "s")
+        df = pl.DataFrame(
+            {
+                "a": [1],
+                "b": [2],
+                "c": [3],
+                "d": [1],
+                "e": [2],
+                "f": [3],
+            }
+        )
+        result = interval_validity(df, [("a", "b", "c"), ("d", "e", "f")], "s")
         ts = result["timestamp"].to_list()
         assert ts[0] == ts[1]
 
-    def test_min_equal_max(self):
-        df = pl.DataFrame({"a": [3.0, 3.0, 4.0]})
-        result = interval_validity(df, ["a"], 3.0, 3.0, "s")
-        assert result["interval_percent"].to_list() == [pytest.approx(2 / 3)]
+    # Précision flottante & entiers
 
-    def test_min_greater_than_max_gives_zero(self):
-        df = pl.DataFrame({"a": [1.0, 2.0, 3.0]})
-        result = interval_validity(df, ["a"], 5.0, 0.0, "s")
+    def test_float_precision_no_false_positive(self):
+        df = pl.DataFrame(
+            {
+                "a": [0.1, 0.2, 0.3],
+                "b": [0.1, 0.2, 0.3],
+                "c": [0.1, 0.2, 0.3],
+            }
+        )
+        result = interval_validity(df, [("a", "b", "c")], "s")
         assert result["interval_percent"].to_list() == [0.0]
 
-    def test_float_precision(self):
-        df = pl.DataFrame({"a": [0.1, 0.2, 0.3]})
-        result = interval_validity(df, ["a"], 0.0, 0.25, "s")
-        assert result["interval_percent"].to_list() == pytest.approx([2 / 3])
-
     def test_integer_dataframe(self):
-        df = pl.DataFrame({"a": [1, 2, 3, 4]})
-        result = interval_validity(df, ["a"], 2, 3, "s")
+        df = pl.DataFrame(
+            {
+                "a": [1, 2, 3, 4],
+                "b": [2, 2, 2, 2],
+                "c": [3, 3, 3, 3],
+            }
+        )
+        # 1<=2<=3 OK, 2<=2<=3 OK, 3<=2<=3 KO, 4<=2<=3 KO
+        result = interval_validity(df, [("a", "b", "c")], "s")
         assert result["interval_percent"].to_list() == [0.5]
 
 

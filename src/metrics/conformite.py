@@ -31,7 +31,7 @@ def text_format(
 
 
 def label_set(
-    df: DataFrame, columns: list[str], labels: list[str], source: str
+    df: DataFrame, columns: list[str], labels: list[str | int | float], source: str
 ) -> DataFrame:
     n = df.height
     timestamp = datetime.now(ZoneInfo("UTC"))
@@ -49,25 +49,36 @@ def label_set(
 
 
 def interval_validity(
-    df: DataFrame, columns: list[str], min_val: float, max_val: float, source: str
+    df: DataFrame, columns: list[tuple[str, str, str]], source: str
 ) -> DataFrame:
     n = df.height
     timestamp = datetime.now(ZoneInfo("UTC"))
 
-    count = df.select(
-        ((pl.col(columns) >= min_val) & (pl.col(columns) <= max_val)).sum()
-    )
+    exprs: list[pl.Expr] = []
+    for c0, c1, c2 in columns:
+        exprs.append((~((pl.col(c0) <= pl.col(c1)) & (pl.col(c1) <= pl.col(c2)))).sum())
 
-    result = count.unpivot(
-        on=columns,
-        variable_name="column_name",
-        value_name="match_count",
-    )
+    counts = df.select(exprs).row(0)  # tuple des comptes
+
+    results = []
+    for (c0, c1, c2), count in zip(columns, counts):
+        results.append(
+            {
+                "column_name_min": c0,
+                "column_name_target": c1,
+                "column_name_max": c2,
+                "count": count,
+            }
+        )
+
+    result = pl.DataFrame(results)
 
     return result.select(
         pl.lit(source).alias("source"),
-        pl.col("column_name"),
-        (pl.col("match_count") / n).alias("interval_percent"),
+        pl.col("column_name_min"),
+        pl.col("column_name_target"),
+        pl.col("column_name_max"),
+        (pl.col("count") / n).alias("interval_percent"),
         pl.lit(timestamp).alias("timestamp"),
     )
 
