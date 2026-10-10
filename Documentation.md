@@ -59,11 +59,11 @@ $\verb|Consommation_IRIS_Evry| = \rho_{\verb|ID_Iris| \to \verb|ID_IRIS|} \big(\
 $R_3 = \big(Source1.Population \Join_{\verb|P1.Adresse| = \verb|C1.ID_Adr|} Source1.Consommation\big) \cup \big(Source2.Population \Join_{\verb|P2.Adresse| = \verb|C2.ID_Adr|} Source2.Consommation\big)$
 
 où :
+
 - `P1` = `Source1.Population`
 - `C1` = `Source1.Consommation`
 - `P2` = `Source2.Population`
 - `C2` = `Source2.Consommation`
-
 
 $R_4 = R_3 \Join_{\verb|R3.CSP| = \verb|C.ID_CSP|} Source3.CSP$
 
@@ -71,13 +71,13 @@ $\verb|Consommation_CSP| = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, AVG(\ver
 
 ### Hypothèses de clés étrangères
 
-| SourceA.Colonne | SourceB.Colonne |
-|---|---|
-| Source1.Population.Adresse | Source1.Consommation.ID_Adr |
-| Source2.Population.Adresse | Source2.Consommation.ID_Adr |
-| Source1.Population.CSP<br>Source2.Population.CSP | Source3.CSP.ID_CSP |
-| Source1.Consommation.Nom_Rue<br>Source2.Consommation.Nom_Rue | Source4.IRIS.ID_Rue |
-| Source1.Consommation.Code_Postal<br>Source2.Consommation.Code_Postal | Source4.IRIS.ID_Ville |
+| SourceA.Colonne                                                  | SourceB.Colonne             |
+| ---------------------------------------------------------------- | --------------------------- |
+| Source1.Population.Adresse                                       | Source1.Consommation.ID_Adr |
+| Source2.Population.Adresse                                       | Source2.Consommation.ID_Adr |
+| Source1.Population.CSPSource2.Population.CSP                     | Source3.CSP.ID_CSP          |
+| Source1.Consommation.Nom_RueSource2.Consommation.Nom_Rue         | Source4.IRIS.ID_Rue         |
+| Source1.Consommation.Code_PostalSource2.Consommation.Code_Postal | Source4.IRIS.ID_Ville       |
 
 ### Requêtes
 
@@ -145,54 +145,55 @@ La **Conformité** mesure la validité du format des données.
 Métriques :
 
 - Format des chaînes de caractères :
-  
+
   Évaluation de REGEX pour vérifier le format des données suivantes :
-    - `Source1.Population.Adresse`
-    - `Source2.Population.Adresse`
-    - `Source1.Consommation.ID_Adr`
-    - `Source2.Consommation.ID_Adr`
-    - `Source1.Consommation.Nom_Rue`
-    - `Source2.Consommation.Nom_Rue`
-    - `Source4.IRIS.ID_Rue`
 
-    Exemple : `Source1.Population.Adresse` = '12' est invalide.
+  - `Source1.Population.Adresse`
+  - `Source2.Population.Adresse`
+  - `Source1.Consommation.ID_Adr`
+  - `Source2.Consommation.ID_Adr`
+  - `Source1.Consommation.Nom_Rue`
+  - `Source2.Consommation.Nom_Rue`
+  - `Source4.IRIS.ID_Rue`
 
+  Exemple : `Source1.Population.Adresse` = '12' est invalide.
 - Ensemble fini de données (labels) :
 
   Évaluation de l'appartenance de l'ensemble des données _X_ à un ensemble prédéfinis de labels _Y_ :
-    - `Source1.Population.CSP`
-    - `Source2.Population.CSP`
-    - `Source3.CSP.ID_CSP`
-    - `Source1.Population.Code_Postal`
-    - `Source2.Population.Code_Postal`
-    - `Source4.IRIS.ID_Ville`
+
+  - `Source1.Population.CSP`
+  - `Source2.Population.CSP`
+  - `Source3.CSP.ID_CSP`
+  - `Source1.Population.Code_Postal`
+  - `Source2.Population.Code_Postal`
+  - `Source4.IRIS.ID_Ville`
 
   Exemple :
-    `Source3.CSP.ID_CSP` &#8838; {
-      "agriculteurs exploitants",
-      "artisans, commerçants et chefs d’entreprise",
-      "cadres et professions intellectuelles supérieures",
-      "professions intermédiaires",
-      "employés",
-      "ouvriers",
-      "retraités",
-      "autres personnes sans activité professionnelle",
-    }
-
+  `Source3.CSP.ID_CSP` &#8838; {
+  "agriculteurs exploitants",
+  "artisans, commerçants et chefs d’entreprise",
+  "cadres et professions intellectuelles supérieures",
+  "professions intermédiaires",
+  "employés",
+  "ouvriers",
+  "retraités",
+  "autres personnes sans activité professionnelle",
+  }
 - Validité d'intervalles de données :
 
   &forall; _t_ &#8712; _T_, on a _y_ <= _t[x]_ <= _z_ :
-    - Tel que &forall; _t_ &#8712; `Source3.CSP` vérifie _t[Salaire\_Min]_ <= _t[Salaire\_Moyen]_ <= _t[Salaire\_Max]_
+
+  - Tel que &forall; _t_ &#8712; `Source3.CSP` vérifie _t[Salaire\_Min]_ <= _t[Salaire\_Moyen]_ <= _t[Salaire\_Max]_
 
   L'idée est d'avoir une métrique flexible permetant de définir _y_ et _z_ statiquement u dynamiquement.
-
 - Validité des formats extra sources :
 
   Vérification de la validité des clés étrangères :
-    - set(`Source1.Population.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
-    - set(`Source2.Population.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
-    - set(`Source1.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
-    - set(`Source2.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
+
+  - set(`Source1.Consommation.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
+  - set(`Source2.Consommation.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
+  - set(`Source1.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
+  - set(`Source2.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
 
   Exemple : `Source1.Population.CSP` doit appartenir à l'ensemble des `ID_CSP` définis dans `Source3.CSP`, sinon la donnée serait invalide.
 
@@ -204,12 +205,13 @@ Métriques :
 
 - Différence de dispersion relative - inter-sources :
   _d\_CV_ = |_ln_(_CV\_Y_ / _CV\_X_)| avec _CV_ = _&sigma;_/|_&mu;_|. Seuil _d\_CV_ doit être <= _ln_(5)
-    - _X_ = `Source1.Consommation.NB_KW_Jour` et _Y_ = `Source2.Consommation.NB_KW_Jour`
 
+  - _X_ = `Source1.Consommation.NB_KW_Jour` et _Y_ = `Source2.Consommation.NB_KW_Jour`
 - Ratio de position (RP) - intra-source :
   Soit (_x_, _y_, _z_) un triplet de colonnes de la relation _R_, tel qu'on suppose que &forall; _t_ &in; _R_ _t[x]_ <= _t[y]_ <= _t[z]_ et _t[x]_ < _t[z]_ .
   On a _RP_ = $\frac{1}{R} \sum_{\forall t \in R}1 [\frac{(t[y] − t[x])}{(t[z] − t[x])} \notin [\epsilon, 1-\epsilon]]$ :
-    - _R_ = `Source3.CSP`, (_x_, _y_, _z_) = (`Salaire_Min`, `Salaire_Moyen`, `Salaire_Max`) et $\epsilon = 0.1$
+
+  - _R_ = `Source3.CSP`, (_x_, _y_, _z_) = (`Salaire_Min`, `Salaire_Moyen`, `Salaire_Max`) et $\epsilon = 0.1$
 
 #### Complétude des données
 
@@ -241,25 +243,25 @@ L'**Unicité** mesure la redondance d'une base de données.
 - Doublons extra sources :
 
   Détection de doublons générés par la jointure de deux sources :
+
   - &forall; _x_ &#8712; (`Source1.Population` &#8746; `Source2.Population`), _x_ est unique.
 
   Exemple : Dans (`Source1.Population` &#8746; `Source2.Population`), si deux lignes partagent le même `(Nom, Prénom)` avec une adresse différente : doublon. Il pourrait ici s'agir de quelqu'un qui à déménagé.
-  
-
 - Doublons intra sources :
 
   Détection de doublons partiel (à partir d'un sous ensemble d'attributs) :
-    - `Source1.Population.(Nom, Prénom)`
-    - `Source2.Population.(Nom, Prénom)`
-    - `Source1.Consommation.(N, Nom_Rue, Code_Postal)`
-    - `Source2.Consommation.(N, Nom_Rue, Code_Postal)`
-    - `Source3.CSP.Salaire_Moyen`
-    - `Source3.CSP.(Salaire_Min, Salaire_Max)`
-    - `Source4.IRIS.ID_Iris`
 
-    Exemple : Dans `Source.Consommation`, si deux lignes partagent le même `(N, Nom_Rue, Code_Postal)` avec des `NB_KW_Jour` différents : doublon.
+  - `Source1.Population.(Nom, Prénom)`
+  - `Source2.Population.(Nom, Prénom)`
+  - `Source1.Consommation.(N, Nom_Rue, Code_Postal)`
+  - `Source2.Consommation.(N, Nom_Rue, Code_Postal)`
+  - `Source3.CSP.Salaire_Moyen`
+  - `Source3.CSP.(Salaire_Min, Salaire_Max)`
+  - `Source4.IRIS.ID_Iris`
 
-    → Hypothèse: Une adresse représente un et un seul logement.
+  Exemple : Dans `Source.Consommation`, si deux lignes partagent le même `(N, Nom_Rue, Code_Postal)` avec des `NB_KW_Jour` différents : doublon.
+
+  → Hypothèse: Une adresse représente un et un seul logement.
 
 #### Cohérence
 
@@ -267,171 +269,178 @@ La **Cohérence** mesure la validité des relations entre les données.
 
 - Distribution groupée des colonnes :
 
-	L'intuition est la suivante : on analyse la distribution des données de toutes les colonnes, lorsque celles-ci sont groupées selon une autre colonne de la même relation _R_.
+  L'intuition est la suivante : on analyse la distribution des données de toutes les colonnes, lorsque celles-ci sont groupées selon une autre colonne de la même relation _R_.
 
-	Algorithme ***FilterRel*** :
-    ```python
-    def FilterRel(R: Relation, completude_seuil: float) -> Relation:
-        target_cols = {}
+  Algorithme ***FilterRel*** :
 
-        for column in R.columns():
-          # We exclude :
-          # - Candidate key columns
-          # - Columns with a single distinct value (excluding nulls)
-          # - Columns with insufficient completeness (below completude_seuil)
-          if (
-            column.distinct() < column.len()
-            and column.distincts_without_null() >= 2
-            and column.completude() >= completude_seuil
-          ):
-            target_cols.add(column.name)
+  ```python
+  def FilterRel(R: Relation, completude_seuil: float) -> Relation:
+      target_cols = {}
 
-        return SELECT target_cols FROM R;
-    ```
+      for column in R.columns():
+        # We exclude :
+        # - Candidate key columns
+        # - Columns with a single distinct value (excluding nulls)
+        # - Columns with insufficient completeness (below completude_seuil)
+        if (
+          column.distinct() < column.len()
+          and column.distincts_without_null() >= 2
+          and column.completude() >= completude_seuil
+        ):
+          target_cols.add(column.name)
 
-	**SIMILARITY & DISTANCE**
+      return SELECT target_cols FROM R;
+  ```
 
-	Algorithme ***ComputeDissimilarityMatrix*** :
-    ```python
-    def ComputeDissimilarityMatrix(labels: list[str]) -> list[list[float]]:
-        N = labels.len()
-        D = numpy.zeros((N, N)) # Init a matrix N x N filled with zeros
+  **SIMILARITY & DISTANCE**
 
-        for idx_row in range(0, N-1):
-            for idx_col in range(idx_row+1, N):
-                # We compute the distance using Levenshtein edit distance
-                distance ← distance_levenshtein(labels[idx_row], labels[idx_col])
-                word_len = max(labels[idx_row].len(), labels[idx_col].len())
-                distance_normalized = distance / word_len if word_len > 0 else 0.0
+  Algorithme ***ComputeDissimilarityMatrix*** :
 
-                D[idx_row][idx_col] ← distance_normalized
-                D[idx_col][idx_row] ← distance_normalized # symetric matrix
-        return D
-    ```
+  ```python
+  def ComputeDissimilarityMatrix(labels: list[str]) -> list[list[float]]:
+      N = labels.len()
+      D = numpy.zeros((N, N)) # Init a matrix N x N filled with zeros
 
-	Algorithme ***MultimodalDistance*** :
-  	```python
-  	def MultimodalDistance(a: Any, b: Any) -> float:
-  	    if isinstance(a, numpy.ndarray) and isinstance(b, numpy.ndarray):
-  	        return numpy.linalg.norm(a - b)
-  	    return abs(a - b)
-  	```
+      for idx_row in range(0, N-1):
+          for idx_col in range(idx_row+1, N):
+              # We compute the distance using Levenshtein edit distance
+              distance ← distance_levenshtein(labels[idx_row], labels[idx_col])
+              word_len = max(labels[idx_row].len(), labels[idx_col].len())
+              distance_normalized = distance / word_len if word_len > 0 else 0.0
 
-	**ENCODING**
+              D[idx_row][idx_col] ← distance_normalized
+              D[idx_col][idx_row] ← distance_normalized # symetric matrix
+      return D
+  ```
 
-	Algorithme ***EncodeProjRel*** :
-    ```python
-    def EncodeProjRel(R: Relation) -> Relation:
-        str_cols = SELECT column_name
-                FROM R.get_columns()
-                WHERE column_type LIKE 'varchar%';
+  Algorithme ***MultimodalDistance*** :
 
-        # We encode string columns as 2D float array
-        for col_name in str_cols:
-            labels = SELECT DISTINCT col_name FROM R;
+  ```python
+  def MultimodalDistance(a: Any, b: Any) -> float:
+      if isinstance(a, numpy.ndarray) and isinstance(b, numpy.ndarray):
+          return numpy.linalg.norm(a - b)
+      return abs(a - b)
+  ```
 
-    	    # We compute the dissimilarity matrix
-    	    D = ComputeDissimilarityMatrix(labels)
+  **ENCODING**
 
-            # Finally we encode the labels (generate embeddings) using t-SNE algorithm
-            tsne = sklearn.manifold.TSNE(
-                n_components=2, perplexity=int(labels.len()*0.5),
-                metric="precomputed", init="random", random_state=42,
-            )
-            embeddings = tsne.fit_transform(D)
-	
-    	    # /!\ WARNING : After this operation R isn't anymore in 1FN
-    	    R.set_column(col_name, embeddings)
+  Algorithme ***EncodeProjRel*** :
 
-    	return R
-    ```
+  ```python
+  def EncodeProjRel(R: Relation) -> Relation:
+      str_cols = SELECT column_name
+              FROM R.get_columns()
+              WHERE column_type LIKE 'varchar%';
 
-	Algorithme ***EncodeNumRel*** :
-    ```python
-    def EncodeNumRel(R: Relation) -> Relation:
-        bool_cols = SELECT column_name
-                    FROM R.get_columns()
-                    WHERE column_type = 'boolean';
-        
-        for col_name in bool_cols:
-            values = SELECT
-                        CASE WHEN col_name = true THEN 1
-                        ELSE 0 END AS col_name
-                     FROM R;
-            R.set_column(col_name, values)
+      # We encode string columns as 2D float array
+      for col_name in str_cols:
+          labels = SELECT DISTINCT col_name FROM R;
 
-        date_cols = SELECT column_name
-                    FROM R.get_columns()
-                    WHERE column_type = 'date';
+  	    # We compute the dissimilarity matrix
+  	    D = ComputeDissimilarityMatrix(labels)
 
-        for col_name in date_cols:
-            values = SELECT CAST(col_name, INTEGER) AS col_name
-                     FROM R;
-            R.set_column(col_name, values)        
-        return R
-    ```
-  
+          # Finally we encode the labels (generate embeddings) using t-SNE algorithm
+          tsne = sklearn.manifold.TSNE(
+              n_components=2, perplexity=int(labels.len()*0.5),
+              metric="precomputed", init="random", random_state=42,
+          )
+          embeddings = tsne.fit_transform(D)
+
+  	    # /!\ WARNING : After this operation R isn't anymore in 1FN
+  	    R.set_column(col_name, embeddings)
+
+  	return R
+  ```
+
+  Algorithme ***EncodeNumRel*** :
+
+  ```python
+  def EncodeNumRel(R: Relation) -> Relation:
+      bool_cols = SELECT column_name
+                  FROM R.get_columns()
+                  WHERE column_type = 'boolean';
+
+      for col_name in bool_cols:
+          values = SELECT
+                      CASE WHEN col_name = true THEN 1
+                      ELSE 0 END AS col_name
+                   FROM R;
+          R.set_column(col_name, values)
+
+      date_cols = SELECT column_name
+                  FROM R.get_columns()
+                  WHERE column_type = 'date';
+
+      for col_name in date_cols:
+          values = SELECT CAST(col_name, INTEGER) AS col_name
+                   FROM R;
+          R.set_column(col_name, values)      
+      return R
+  ```
+
   **STATISTICS**
 
   Algorithme ***ComputeGroupStats*** :
+
   ```python
   def compute_group_stats(X_values) -> tuple[float, float]:
-	"""Return : mean, variance"""
-	if isinstance(X_values[0], numpy.ndarray):
-	    mu = np.mean(arr, axis=0)  # Centroïde [mean_x, mean_y]
-        var = np.var(arr[:, 0]) + np.var(arr[:, 1])  # Variance spatiale
-        return mu, var
-	else:
-	    mu = numpy.mean(X_values)
-        var = numpy.var(X_values)
-        return mu, var 
+      """Return : mean, variance"""
+      if isinstance(X_values[0], numpy.ndarray):
+          mu = np.mean(arr, axis=0)  # Centroïde [mean_x, mean_y]
+          var = np.var(arr[:, 0]) + np.var(arr[:, 1])  # Variance spatiale
+          return mu, var
+      else:
+          mu = numpy.mean(X_values)
+          var = numpy.var(X_values)
+          return mu, var
   ```
 
   Algorithme ***AnalyzeGroupedDistribution*** :
-    ```python
-    def AnalyzeGroupedDistribution(R: Relation) -> ???:
-        R_filtered = FilterRel(R)
-        R_encoded = EncodeProjRel(EncodeNumRel(R_filtered))
 
-		N = SELECT COUNT(*) FROM R_encoded;
-		epsilon = 10e-12
+  ```python
+  def AnalyzeGroupedDistribution(R: Relation) -> ???:
+      R_filtered = FilterRel(R)
+      R_encoded = EncodeProjRel(EncodeNumRel(R_filtered))
 
-        for x in R_encoded.get_columns():
-            global_vals = SELECT x FROM R_encoded;
-            global_mu, global_var = compute_group_stats(global_vals)
+  	N = SELECT COUNT(*) FROM R_encoded;
+  	epsilon = 10e-12
 
-            for y in R_encoded.get_columns()\{x}:
-                x_groups = SELECT x FROM R_encoded GROUP BY y;
-				
-				var_intra = 0.0
-            	max_group_var = 0.0
-            	M3 = 0.0
+      for x in R_encoded.get_columns():
+          global_vals = SELECT x FROM R_encoded;
+          global_mu, global_var = compute_group_stats(global_vals)
 
-				for group in x_groups:
-					Ng = group.len()
-					group_mu, group_var = compute_group_stats(group)
+          for y in R_encoded.get_columns()\{x}:
+              x_groups = SELECT x FROM R_encoded GROUP BY y;
 
-					var_intra += (Ng / N) * group_var
-					max_group_var = max(max_group_var, group_var)
-					dist = MultimodalDistance(group_mu, global_mu)
-					M3 = max(M3, sqrt(Ng) * dist)
-				
-				M1 = (global_var - var_intra) / (global_var + epsilon)
-				M2 = max_group_var / (var_intra + epsilon)
-        M3 = M3 / (sqrt(global_var) + epsilon)
-				matrix_results[x][y] = [M1, M2, M3]
-		
-    # M1 (eta-squared) in [0;1], M1 -> 1 => There is a relation between x and y
-    # M2 > 5 => There is a global relation, who don't work on an subgroup
-    # M3 > 10 => The subgroup is different from the global group (possible outliers)
-		return matrix_results
-    ```
+  			var_intra = 0.0
+          	max_group_var = 0.0
+          	M3 = 0.0
 
+  			for group in x_groups:
+  				Ng = group.len()
+  				group_mu, group_var = compute_group_stats(group)
+
+  				var_intra += (Ng / N) * group_var
+  				max_group_var = max(max_group_var, group_var)
+  				dist = MultimodalDistance(group_mu, global_mu)
+  				M3 = max(M3, sqrt(Ng) * dist)
+
+  			M1 = (global_var - var_intra) / (global_var + epsilon)
+  			M2 = max_group_var / (var_intra + epsilon)
+      M3 = M3 / (sqrt(global_var) + epsilon)
+  			matrix_results[x][y] = [M1, M2, M3]
+
+  # M1 (eta-squared) in [0;1], M1 -> 1 => There is a relation between x and y
+  # M2 > 5 => There is a global relation, who don't work on an subgroup
+  # M3 > 10 => The subgroup is different from the global group (possible outliers)
+  	return matrix_results
+  ```
 - Distribution groupée des colonnes (_SLM_):
   L'idée est ici d'utiliser un _SLM_ (Small Langage Model) pour générer les embeddings des chaînes de caractères dans l'algorithme ***EncodeProjRel***.
 
 > [!WARNING]
 > Problèmes ouverts :
+>
 > - La détection des règles métier pour la Cohérence présente des limites lorsque les ensembles de définition des deux colonnes (x, y) concernées ont une distribution très divergeante.
 >   - Exemple : poids_kg => dosage_mg, or comme il existe bien plus de valeurs distinctes pour poids_kg que pour dosage_mg, seule la relation dosage_mg => poids_kg est détectée.
 > - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
