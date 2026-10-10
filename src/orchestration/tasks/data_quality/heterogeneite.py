@@ -37,7 +37,7 @@ def heterogeneite_assessment(
     # 3. Calculer la difference de dispersion
     difference = calculer_difference_dispersion(cv1, cv2)
 
-    # 4. Lire les donnees CSP et calculer RP
+    # 4. Lire les donnees CSP et calculer le ratio de position
     df_csp = DfReader(
         data_dir / "csp3.parquet",
         FileType.PARQUET,
@@ -45,7 +45,15 @@ def heterogeneite_assessment(
 
     rp = calculer_ratio_position(df_csp)
 
-    # 5. Enregistrer les resultats
+    # 5. Afficher les metriques dans les logs Airflow
+    print("========== METRIQUES D'HETEROGENEITE ==========")
+    print(f"CV consommation 1 : {cv1:.6f}")
+    print(f"CV consommation 2 : {cv2:.6f}")
+    print(f"Difference de dispersion : {difference:.6f}")
+    print(f"Ratio de position : {rp:.6f}")
+    print("===============================================")
+
+    # 6. Enregistrer les resultats
     timestamp = datetime.now(timezone.utc)
 
     resultats = pl.DataFrame({
