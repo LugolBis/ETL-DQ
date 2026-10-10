@@ -40,7 +40,7 @@ def ensure_extracted(
             conf=dict(cfg or {}),
             wait_for_completion=True,
             deferrable=True,
-            poke_interval=30,
+            poke_interval=10,
             allowed_states=["success"],
             failed_states=["failed"],
         )
