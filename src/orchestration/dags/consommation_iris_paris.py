@@ -5,7 +5,7 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 
 from orchestration.tasks.enums import FileType
-from orchestration.tasks.extract.core import extract
+from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.load.system import display
 from orchestration.tasks.models import DfReader, DfWriter
 from orchestration.tasks.transform.core import apply_dfs
@@ -31,19 +31,17 @@ def consommation_iris_paris():
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    task_extract_conso = extract.override(task_id="Extract_Source1_Consommation")(
-        DfReader(DATA_DIR / "Source1_Consommation.csv", FileType.CSV, has_header=True),
-        DfWriter(DATA_DIR / "consommation1.parquet", FileType.PARQUET),
+    sources_deps = (
+        ("extract_source1", [DATA_DIR / "consommation1.parquet"]),
+        ("extract_source4", [DATA_DIR / "iris4.parquet"]),
     )
 
-    task_extract_iris = extract.override(task_id="Extract_Source4_IRIS")(
-        DfReader(DATA_DIR / "Source4_IRIS.csv", FileType.CSV, has_header=True),
-        DfWriter(DATA_DIR / "iris4.parquet", FileType.PARQUET),
-    )
+    df_readers = [
+        DfReader(path, FileType.PARQUET) for _, paths in sources_deps for path in paths
+    ]
 
     task_transform = apply_dfs.override(task_id="Join_and_Agg_ops")(
-        DfReader(DATA_DIR / "consommation1.parquet", FileType.PARQUET),
-        DfReader(DATA_DIR / "iris4.parquet", FileType.PARQUET),
+        *df_readers,
         func=lambda df_a, df_b: df_a.join(
             df_b,
             left_on=["Nom_Rue", "Code_Postal"],
@@ -57,13 +55,11 @@ def consommation_iris_paris():
         DfReader(DATA_DIR / "Consommation_IRIS_Paris.parquet", FileType.PARQUET), 15
     )
 
-    (
-        start
-        >> [task_extract_conso, task_extract_iris]
-        >> task_transform
-        >> task_display
-        >> end
-    )
+    # Tasks chaining - HITL
+    for source_id, file_paths in sources_deps:
+        start >> ensure_extracted(source_id, file_paths) >> task_transform
+
+    task_transform >> task_display >> end
 
 
 dag_instance = consommation_iris_paris()

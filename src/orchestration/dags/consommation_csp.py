@@ -5,11 +5,10 @@ import pendulum
 import polars as pl
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
-from airflow.sdk.bases.decorator import Task, XComArg
 from polars import DataFrame
 
 from orchestration.tasks.enums import FileType
-from orchestration.tasks.extract.core import extract
+from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.load.system import display
 from orchestration.tasks.models import DfReader, DfWriter
 from orchestration.tasks.transform.core import apply_dfs
@@ -26,30 +25,6 @@ SQL_QUERY_STATS = """
 """
 
 
-def _gen_extracts(
-    source: int, names: list[str]
-) -> tuple[list[XComArg | Task], list[Path]]:
-    tasks = []
-    outputs = []
-
-    for name in names:
-        output_path = DATA_DIR / f"{name.lower()}{source}.parquet"
-
-        outputs.append(output_path)
-        tasks.append(
-            extract.override(task_id=f"Extract_Source{source}_{name}")(
-                DfReader(
-                    DATA_DIR / f"Source{source}_{name}.csv",
-                    FileType.CSV,
-                    has_header=True,
-                ),
-                DfWriter(output_path, FileType.PARQUET),
-            )
-        )
-
-    return tasks, outputs
-
-
 @dag(
     schedule=None,
     start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
@@ -60,13 +35,22 @@ def consommation_csp():
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    # The order of `names` is important
-    tasks_extract_source1, out_paths1 = _gen_extracts(1, ["Population", "Consommation"])
-    tasks_extract_source2, out_paths2 = _gen_extracts(2, ["Population", "Consommation"])
-
-    task_extract_source3 = extract.override(task_id="Extract_Source3_CSP")(
-        DfReader(DATA_DIR / "Source3_CSP.csv", FileType.CSV, has_header=True),
-        DfWriter(DATA_DIR / "csp3.parquet", FileType.PARQUET),
+    sources_deps = (
+        (
+            "extract_source1",
+            [
+                DATA_DIR / "population1.parquet",
+                DATA_DIR / "consommation1.parquet",
+            ],
+        ),
+        (
+            "extract_source2",
+            [
+                DATA_DIR / "population2.parquet",
+                DATA_DIR / "consommation2.parquet",
+            ],
+        ),
+        ("extract_source3", [DATA_DIR / "csp3.parquet"]),
     )
 
     fn_join_pop_conso: Callable[[DataFrame, DataFrame], DataFrame] = (
@@ -89,9 +73,12 @@ def consommation_csp():
         .sql(SQL_QUERY_STATS)
     )
 
+    df_readers = [
+        DfReader(path, FileType.PARQUET) for _, paths in sources_deps for path in paths
+    ]
+
     task_transform = apply_dfs.override(task_id="Transform_sources")(
-        *[DfReader(path, FileType.PARQUET) for path in out_paths1 + out_paths2],
-        DfReader(DATA_DIR / "csp3.parquet", FileType.PARQUET),
+        *df_readers,
         func=fn_merged_flows,
         df_w=DfWriter(DATA_DIR / "Consommation_CSP.parquet", FileType.PARQUET),
     )
@@ -100,10 +87,10 @@ def consommation_csp():
         DfReader(DATA_DIR / "Consommation_CSP.parquet", FileType.PARQUET), 15
     )
 
-    # Tasks chaining
-    start >> tasks_extract_source1 >> task_transform
-    start >> tasks_extract_source2 >> task_transform
-    start >> task_extract_source3 >> task_transform
+    # Tasks chaining - HITL
+    for source_id, file_paths in sources_deps:
+        start >> ensure_extracted(source_id, file_paths) >> task_transform
+
     task_transform >> task_display >> end
 
 
