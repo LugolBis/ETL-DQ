@@ -2,6 +2,7 @@
 .data/
 airflow/
 .airflow/
+.superset_home
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
