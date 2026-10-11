@@ -109,8 +109,8 @@ def foreign_key_validity(
             .select(
                 pl.lit(src1).alias("source_1"),
                 pl.lit(src2).alias("source_2"),
-                pl.lit(col1).alias("column_1"),
-                pl.lit(col2).alias("column_2"),
+                pl.lit(col1).alias("column_name_1"),
+                pl.lit(col2).alias("column_name_2"),
                 (pl.len() / n).alias("fk_percent"),
             )
             for col1, col2 in columns
