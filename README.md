@@ -33,6 +33,7 @@ Edit the `.env` file you just created. It's grouped into four sections; here's w
 | `AIRFLOW__API__SECRET_KEY` | Secret key for the Airflow API server (sessions/CSRF). | `openssl rand -hex 32`|
 | `FERNET_KEY` | Used as `AIRFLOW__CORE__FERNET_KEY` to encrypt connections/variables stored in the metadata database. | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DOCKER_GID` | GID of the host's `docker` group, added to the `airflow-worker` container so it can reach the Docker socket and drive the dbt-runner container. | Linux:<br>`getent group docker \| cut -d: -f3` |
+| `SUPERSET_SECRET_KEY` | Secret key for Superset. | Linux:<br>`openssl rand -base64 42` |
 
 ### Build and run
 
