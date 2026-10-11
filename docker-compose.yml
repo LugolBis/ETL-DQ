@@ -175,8 +175,40 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  x-superset-common: &superset-common
+    build:
+      context: superset
+      dockerfile: Dockerfile
+    image: superset-duckdb:latest
+    env_file:
+      - ${ENV_FILE_PATH:-.env}
+    volumes:
+      - .superset_home:/app/superset_home # contains the SQLite database that store the meta data
+      - ./airflow/.data:/data:ro
+
+  superset-init:
+    <<: *superset-common
+    user: root
+    restart: "no"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        chown -R superset:superset /app/superset_home
+        exec runuser -u superset -- /app/init.sh
+
+  superset:
+    <<: *superset-common
+    ports:
+      - "8088:8088"
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
 volumes:
   postgres-db-volume:
+  superset_home:
 
 networks:
   default:
