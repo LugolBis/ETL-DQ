@@ -444,3 +444,43 @@ La **Cohérence** mesure la validité des relations entre les données.
 >   - Exemple : poids_kg => dosage_mg, or comme il existe bien plus de valeurs distinctes pour poids_kg que pour dosage_mg, seule la relation dosage_mg => poids_kg est détectée.
 > - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
 > - Discuter du nombre de dimensions des embeddings, pour trouver un équilibre entre temps d'exécution et précision.
+
+## Amélioration de la Qualité de données
+
+### Facettes & Solutions d'imputation :
+
+#### Conformité
+
+- Format des chaînes de caractères :
+  - Fournir la REGEX cible et la donnée erronnée à un SLM pour q'il essaie de corriger -> loger et monitorer chaque changements pour une validation humaine / un plus gros modèle d'IA.
+
+- Ensemble fini de données (labels) :
+  - Fournir l'ensembles de labels acceptés _X_ à un SLM de classification pour qu'il calcule l'étiquette (label) la plus probable pour la donnée. On pourrait utiliser _JEV_ pour le SLM.
+
+- Validité d'intervalles de données :
+  - ????
+
+- Validité des formats extra sources :
+  - Utiliser une jointure plus flexible -> pas une égalité stricte, mais un calcul de similarité. Définir _seuil\_sim_ tel que pour toute clés candidate _k_ tel que _sim(k)_ >= _seuil\_sim_ on considère que la contrainte de clé étrangère est valide.
+
+#### Hétérogénéité des échelles
+
+- Différence de dispersion relative - inter-sources :
+  - Utiliser une régression linéaire pour réconcilier les échelles.
+
+- Ratio de position (RP) - intra-source :
+  - Tester des multiplications / divisions avec des _x_ $\in$ _X_ pour essayer d'identifier un (_x_, _operation_) tel que _RP_ $\in$ $[\epsilon, 1-\epsilon]$.
+
+#### Complétude des données
+
+- Mesure du pourcentage de valeurs manquantes :
+  1. Imputation statistique : _MICE_ sur les données quantitatives.
+  1. Utiliser un modèle _GAN_ sur les données catégorielles.
+
+#### Unicité
+
+- Doublons extra sources :
+  - ????
+
+- Doublons intra sources :
+  - Utiliser la découverte de dépendances fonctionnelles approximatives (_DFA_) en utilisant l'algorithme _TANE_.
