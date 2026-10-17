@@ -397,7 +397,7 @@ La **Cohérence** mesure la validité des relations entre les données.
   Algorithme ***AnalyzeGroupedDistribution*** :
 
   ```python
-  def AnalyzeGroupedDistribution(R: Relation) -> ???:
+  def AnalyzeGroupedDistribution(R: Relation) -> Relation:
       R_filtered = FilterRel(R)
       R_encoded = EncodeProjRel(EncodeNumRel(R_filtered))
 
