@@ -43,7 +43,7 @@ def consommation_iris_evry():
     task_transform = apply_dfs.override(task_id="Join_and_Agg_ops")(
         *df_readers,
         func=lambda df_a, df_b: df_a.join(
-            df_b,
+            df_b.rename({"ID_IRIS": "ID_Iris"}),
             left_on=["Nom_Rue", "Code_Postal"],
             right_on=["ID_Rue", "ID_Ville"],
             how="inner",
