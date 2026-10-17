@@ -12,16 +12,17 @@ from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.load.system import display
 from orchestration.tasks.models import DfReader, DfWriter
 from orchestration.tasks.transform.core import apply_dfs
+from orchestration.tasks.transform.helpers import fuzzy_join
 
 DATA_DIR = Path("/opt/airflow/.data")
 
 SQL_QUERY_STATS = """
     SELECT 
-        CSP,
+        ID_CSP,
         Salaire_Moyen,
         AVG(NB_KW_Jour * 365) AS Conso_moyenne_annuelle
     FROM self
-    GROUP BY CSP, Salaire_Moyen;
+    GROUP BY ID_CSP, Salaire_Moyen;
 """
 
 
@@ -53,9 +54,49 @@ def consommation_csp():
         ("extract_source3", [DATA_DIR / "csp3.parquet"]),
     )
 
-    fn_join_pop_conso: Callable[[DataFrame, DataFrame], DataFrame] = (
-        lambda df_pop, df_conso: df_pop.join(
-            df_conso, left_on="Adresse", right_on="ID_Adr", how="inner"
+    fn_join_pop_conso1: Callable[[DataFrame, DataFrame], DataFrame] = (
+        lambda df_pop, df_conso: df_pop.with_columns(
+            pl.concat_str(
+                [
+                    pl.col("Adresse").str.extract(r",\s*(\d+)"),
+                    pl.col("Adresse")
+                    .str.extract(r",\s*\d+\s+\S+\s+(.+)$")
+                    .str.extract_all(r"\b\w")
+                    .list.join(""),
+                ]
+            ).alias("ID_Adr")
+        ).join(df_conso, on="ID_Adr", how="inner")
+    )
+
+    fn_join_pop_conso2: Callable[[DataFrame, DataFrame], DataFrame] = (
+        lambda df_pop, df_conso: df_pop.with_columns(
+            pl.col("Adresse")
+            .str.extract(r"^[^,]+,\s*\d{5},\s*(\d+)")
+            .cast(pl.Int64)
+            .alias("N"),
+            pl.col("Adresse")
+            .str.extract(r"^[^,]+,\s*\d{5},\s*\d+\s+(.+)$")
+            .str.to_uppercase()
+            .str.normalize("NFKD")
+            .str.replace_all(r"[\u0300-\u036f]", "")
+            .alias("Nom_Rue"),
+            pl.col("Adresse")
+            .str.extract(r"^[^,]+,\s*(\d{5}),\s*(\d+)")
+            .alias("Code_Postal"),
+        ).join(df_conso, on=["N", "Nom_Rue", "Code_Postal"], how="inner")
+    )
+
+    fn_join_pop_csp1: Callable[[DataFrame, DataFrame], DataFrame] = (
+        lambda df_pop, df_csp: fuzzy_join(df_pop, df_csp, "CSP", "Desc").select(
+            ["ID_CSP", "Salaire_Moyen", "NB_KW_Jour"]
+        )
+    )
+
+    fn_join_pop_csp2: Callable[[DataFrame, DataFrame], DataFrame] = (
+        lambda df_pop, df_csp: df_pop.join(
+            df_csp, left_on="CSP", right_on="ID_CSP", how="inner"
+        ).select(
+            pl.col("CSP").alias("ID_CSP"), pl.col("Salaire_Moyen"), pl.col("NB_KW_Jour")
         )
     )
 
@@ -65,13 +106,10 @@ def consommation_csp():
 
     fn_merged_flows: Callable[
         [DataFrame, DataFrame, DataFrame, DataFrame, DataFrame], DataFrame
-    ] = lambda df_pop1, df_conso1, df_pop2, df_conso2, df_csp: (
-        fn_union_sources(
-            fn_join_pop_conso(df_pop1, df_conso1), fn_join_pop_conso(df_pop2, df_conso2)
-        )
-        .join(df_csp, left_on="CSP", right_on="ID_CSP", how="inner")
-        .sql(SQL_QUERY_STATS)
-    )
+    ] = lambda df_pop1, df_conso1, df_pop2, df_conso2, df_csp: fn_union_sources(
+        fn_join_pop_csp1(fn_join_pop_conso1(df_pop1, df_conso1), df_csp),
+        fn_join_pop_csp2(fn_join_pop_conso2(df_pop2, df_conso2), df_csp),
+    ).sql(SQL_QUERY_STATS)
 
     df_readers = [
         DfReader(path, FileType.PARQUET) for _, paths in sources_deps for path in paths
