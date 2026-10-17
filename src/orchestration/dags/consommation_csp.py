@@ -12,7 +12,11 @@ from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.load.system import display
 from orchestration.tasks.models import DfReader, DfWriter
 from orchestration.tasks.transform.core import apply_dfs
-from orchestration.tasks.transform.helpers import fuzzy_join
+from orchestration.tasks.transform.helpers import (
+    ADRESSE_EXTRACTIONS,
+    expand_column,
+    fuzzy_join,
+)
 
 DATA_DIR = Path("/opt/airflow/.data")
 
@@ -55,34 +59,21 @@ def consommation_csp():
     )
 
     fn_join_pop_conso1: Callable[[DataFrame, DataFrame], DataFrame] = (
-        lambda df_pop, df_conso: df_pop.with_columns(
-            pl.concat_str(
-                [
-                    pl.col("Adresse").str.extract(r",\s*(\d+)"),
-                    pl.col("Adresse")
-                    .str.extract(r",\s*\d+\s+\S+\s+(.+)$")
-                    .str.extract_all(r"\b\w")
-                    .list.join(""),
-                ]
-            ).alias("ID_Adr")
-        ).join(df_conso, on="ID_Adr", how="inner")
+        lambda df_pop, df_conso: expand_column(
+            df_pop,
+            "Adresse",
+            ADRESSE_EXTRACTIONS[:-1],
+            [(r"^Paris,\s*", "Paris, 75000, "), ("(?i)rue", "")],
+            dtypes={"N": pl.Int64},
+        ).join(df_conso, on=["N", "Nom_Rue"], how="inner")
     )
 
     fn_join_pop_conso2: Callable[[DataFrame, DataFrame], DataFrame] = (
-        lambda df_pop, df_conso: df_pop.with_columns(
-            pl.col("Adresse")
-            .str.extract(r"^[^,]+,\s*\d{5},\s*(\d+)")
-            .cast(pl.Int64)
-            .alias("N"),
-            pl.col("Adresse")
-            .str.extract(r"^[^,]+,\s*\d{5},\s*\d+\s+(.+)$")
-            .str.to_uppercase()
-            .str.normalize("NFKD")
-            .str.replace_all(r"[\u0300-\u036f]", "")
-            .alias("Nom_Rue"),
-            pl.col("Adresse")
-            .str.extract(r"^[^,]+,\s*(\d{5}),\s*(\d+)")
-            .alias("Code_Postal"),
+        lambda df_pop, df_conso: expand_column(
+            df_pop,
+            "Adresse",
+            ADRESSE_EXTRACTIONS,
+            dtypes={"N": pl.Int64},
         ).join(df_conso, on=["N", "Nom_Rue", "Code_Postal"], how="inner")
     )
 
