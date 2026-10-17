@@ -1,8 +1,11 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import pendulum
+import polars as pl
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
+from polars import DataFrame
 
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.extract.system import ensure_extracted
@@ -40,14 +43,27 @@ def consommation_iris_paris():
         DfReader(path, FileType.PARQUET) for _, paths in sources_deps for path in paths
     ]
 
-    task_transform = apply_dfs.override(task_id="Join_and_Agg_ops")(
-        *df_readers,
-        func=lambda df_a, df_b: df_a.join(
-            df_b,
+    # /!\ WARNING : We assume here that invalid 'Code_Postal' aren't mapped into valid city
+    #               So the invalid data will be ignored during the join
+    fn_transform: Callable[[DataFrame, DataFrame], DataFrame] = lambda df_a, df_b: (
+        df_a.with_columns(
+            pl.when(pl.col("Code_Postal").is_between(75000, 75999))
+            .then(pl.lit("Paris"))
+            .otherwise(pl.col("Code_Postal").cast(pl.String))
+            .alias("Code_Postal")
+        )
+        .join(
+            df_b.rename({"ID_IRIS": "ID_Iris"}),
             left_on=["Nom_Rue", "Code_Postal"],
             right_on=["ID_Rue", "ID_Ville"],
             how="inner",
-        ).sql(SQL_QUERY_STATS),
+        )
+        .sql(SQL_QUERY_STATS)
+    )
+
+    task_transform = apply_dfs.override(task_id="Join_and_Agg_ops")(
+        *df_readers,
+        func=fn_transform,
         df_w=DfWriter(DATA_DIR / "Consommation_IRIS_Paris.parquet", FileType.PARQUET),
     )
 
