@@ -17,6 +17,9 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     AIRFLOW__CORE__DAG_DISCOVERY_SAFE_MODE: 'false'
     AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: 120
+    AIRFLOW__CORE__PARALLELISM: 64
+    AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 16
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: 16
     AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-changeme_jwt_secret}
     AIRFLOW__API_AUTH__JWT_ISSUER: ${AIRFLOW__API_AUTH__JWT_ISSUER:-airflow}
     AIRFLOW__API__SECRET_KEY: ${AIRFLOW__API__SECRET_KEY:-changeme_api_secret_key}
@@ -33,6 +36,17 @@ x-airflow-common: &airflow-common
       condition: service_healthy
     postgres:
       condition: service_healthy
+
+x-superset-common: &superset-common
+  build:
+    context: superset
+    dockerfile: Dockerfile
+  image: superset-duckdb:latest
+  env_file:
+    - ${ENV_FILE_PATH:-.env}
+  volumes:
+    - .superset_home:/app/superset_home # contains the SQLite database that store the meta data
+    - ./airflow/.data:/data:ro
 
 services:
   postgres:
@@ -174,17 +188,6 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-
-  x-superset-common: &superset-common
-    build:
-      context: superset
-      dockerfile: Dockerfile
-    image: superset-duckdb:latest
-    env_file:
-      - ${ENV_FILE_PATH:-.env}
-    volumes:
-      - .superset_home:/app/superset_home # contains the SQLite database that store the meta data
-      - ./airflow/.data:/data:ro
 
   superset-init:
     <<: *superset-common
