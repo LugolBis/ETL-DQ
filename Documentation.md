@@ -458,7 +458,7 @@ La **Cohérence** mesure la validité des relations entre les données.
   - Fournir l'ensembles de labels acceptés _X_ à un SLM de classification pour qu'il calcule l'étiquette (label) la plus probable pour la donnée. On pourrait utiliser _JEV_ pour le SLM.
 
 - Validité d'intervalles de données :
-  - ????
+  - Si une valeur sort de son intervalle, on regarde d'abord si ce sont les bornes qui sont à l'envers (par exemple _Salaire\_Min_ > _Salaire\_Max_) : dans ce cas on les échange, car il s'agit sans doute d'une inversion de colonnes. Sinon, quand l'écart est petit, on ramène simplement la valeur à la borne la plus proche. Quand l'écart est trop grand (au-delà d'un seuil _seuil\_ecart_), on ne force pas une valeur arbitraire : on la met à `Null` et on l'impute avec _MICE_, comme pour la complétude. Chaque modification est loguée pour qu'un humain puisse la valider.
 
 - Validité des formats extra sources :
   - Utiliser une jointure plus flexible -> pas une égalité stricte, mais un calcul de similarité. Définir _seuil\_sim_ tel que pour toute clés candidate _k_ tel que _sim(k)_ >= _seuil\_sim_ on considère que la contrainte de clé étrangère est valide.
@@ -480,7 +480,7 @@ La **Cohérence** mesure la validité des relations entre les données.
 #### Unicité
 
 - Doublons extra sources :
-  - ????
+  - L'union (∪) n'élimine que les doublons exacts (tuples identiques sur tous les attributs). Les doublons partiels entre sources (même clé métier, attributs différents, par exemple même (Nom, Prénom) avec une adresse différente) subsistent après l'union. On leur applique la même solution que pour les doublons intra sources (DFA avec TANE) sur la relation obtenue après l'union, ou après toute autre opération de composition.
 
 - Doublons intra sources :
   - Utiliser la découverte de dépendances fonctionnelles approximatives (_DFA_) en utilisant l'algorithme _TANE_.
