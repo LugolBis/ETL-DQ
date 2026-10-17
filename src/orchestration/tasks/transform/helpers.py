@@ -41,7 +41,7 @@ def fuzzy_join(
     column_1: str,
     column_2: str,
     included: Literal["column_1", "column_2"] = "column_1",
-    how: Literal["left", "right"] = "left",
+    how: Literal["left", "right", "inner"] = "left",
 ) -> DataFrame:
     """
     Args:
@@ -52,6 +52,8 @@ def fuzzy_join(
         how :
             - "left": all rows from df1 are retained
             - "right": all rows from df2 are retained
+            - "inner": only df1 rows with at least one match are retained
+              (one match per df1 row, the one with the smallest df2 index)
     """
     id1, id2 = "__id1", "__id2"
     tag, ref = "__tag", "__ref"
@@ -62,7 +64,7 @@ def fuzzy_join(
     if included == "column_1":
         tags = _tags_of(df1_idx, column_1, id1, tag)
         refs = _refs_of(df2_idx, column_2, id2, ref)
-    elif included == "column_2":
+    else:
         tags = _tags_of(df2_idx, column_2, id2, tag)
         refs = _refs_of(df1_idx, column_1, id1, ref)
 
@@ -71,14 +73,15 @@ def fuzzy_join(
         pl.col(ref).str.contains(pl.col(tag), literal=True),
     ).select(id1, id2)
 
-    if how == "left":
+    if how in ("left", "inner"):
+        # One match (smallest id2) per df1 row
         best = pairs.group_by(id1).agg(pl.col(id2).min())
         result = (
-            df1_idx.join(best, on=id1, how="left")
+            df1_idx.join(best, on=id1, how=how)
             .join(df2_idx, on=id2, how="left")
             .sort(id1)
         )
-    elif how == "right":
+    else:  # right
         best = df2_idx.select(id2).join(
             pairs.group_by(id2).agg(pl.col(id1).min()), on=id2, how="left"
         )
