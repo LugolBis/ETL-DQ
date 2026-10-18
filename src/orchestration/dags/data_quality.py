@@ -54,7 +54,8 @@ def data_quality_assessment():
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    # We use transitives dependencies to cover all of the dependencies with a min `sources_deps`
+    # We use transitives dependencies to cover all of the dependencies
+    # with a min `sources_deps`
     sources_deps = (
         (
             "consommation_csp",
@@ -64,7 +65,10 @@ def data_quality_assessment():
             "consommation_iris_evry",
             [DATA_DIR / "Consommation_IRIS_Evry.parquet"],
         ),
-        ("consommation_iris_paris", [DATA_DIR / "Consommation_IRIS_Paris.parquet"]),
+        (
+            "consommation_iris_paris",
+            [DATA_DIR / "Consommation_IRIS_Paris.parquet"],
+        ),
     )
 
     # 1. Completude
@@ -120,9 +124,12 @@ def data_quality_assessment():
     task_unicite = unicite_assessment(
         UNICITE_CFG,
         DATA_DIR,
-        DfWriter(DQ_DIR / "unicite.parquet", FileType.PARQUET),
+        DfWriter(
+            DQ_DIR / "unicite.parquet",
+            FileType.PARQUET,
+        ),
     )
-    
+
     # 5. Heterogeneite
     task_grp_heterogeneite = heterogeneite_assessment(
         (
@@ -152,10 +159,23 @@ def data_quality_assessment():
         (
             start
             >> ensure_extracted(source_id, file_paths)
-            >> [task_completude, task_coherence, task_grp_conformite, task_unicite, task_grp_heterogeneite]
+            >> [
+                task_completude,
+                task_coherence,
+                task_grp_conformite,
+                task_unicite,
+                task_grp_heterogeneite,
+            ]
         )
 
-    [task_completude, task_coherence, task_grp_conformite, task_unicite] >> end
+    # Wait for all five quality assessments before ending
+    [
+        task_completude,
+        task_coherence,
+        task_grp_conformite,
+        task_unicite,
+        task_grp_heterogeneite,
+    ] >> end
 
 
 dag_instance = data_quality_assessment()

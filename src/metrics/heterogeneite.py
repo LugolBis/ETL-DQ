@@ -55,26 +55,50 @@ def calculer_ratio_position(
     if any(col not in df.columns for col in colonnes):
         raise ValueError("Colonnes de salaire manquantes")
 
+    # Convertir les salaires en nombres.
+    # Exemple : "16 800" devient 16800.
+    # La conversion ne modifie pas le fichier source.
+    df = df.with_columns(
+        [
+            pl.col(colonne)
+            .cast(pl.String)
+            .str.replace_all(r"\s+", "")
+            .cast(pl.Float64)
+            .alias(colonne)
+            for colonne in colonnes
+        ]
+    )
+
+    # Exclure uniquement les lignes avec des valeurs manquantes.
+    df = df.drop_nulls(subset=colonnes)
+
+    if df.is_empty():
+        raise ValueError(
+            "Aucune ligne complete pour calculer le ratio"
+        )
+
     min_s = pl.col(colonne_min)
     moy_s = pl.col(colonne_moyen)
     max_s = pl.col(colonne_max)
 
+    # Verifier la coherence des salaires.
     valides = (
-        min_s.is_not_null()
-        & moy_s.is_not_null()
-        & max_s.is_not_null()
-        & (min_s <= moy_s)
+        (min_s <= moy_s)
         & (moy_s <= max_s)
         & (min_s < max_s)
     )
 
     if not df.select(valides.all()).item():
-        raise ValueError("Certaines lignes ont des salaires invalides")
+        raise ValueError(
+            "Certaines lignes ont des salaires invalides"
+        )
 
+    # Calculer le ratio de position.
     ratios = df.select(
         ((moy_s - min_s) / (max_s - min_s)).alias("ratio")
     )
 
+    # Proportion des ratios atypiques.
     return ratios.select(
         (
             (pl.col("ratio") < seuil_min)

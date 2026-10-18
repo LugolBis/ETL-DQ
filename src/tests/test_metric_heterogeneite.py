@@ -60,3 +60,12 @@ class TestHeterogeneite:
         })
         with pytest.raises(ValueError):
             calculer_ratio_position(df)
+
+    def test_ratio_position_avec_valeur_manquante(self):
+        df = pl.DataFrame({
+            "Salaire_Min": [1000.0, 1000.0, 1000.0],
+            "Salaire_Moyen": [1050.0, 1500.0, None],
+            "Salaire_Max": [2000.0, 2000.0, 2000.0],
+        })
+
+        assert calculer_ratio_position(df) == pytest.approx(0.5)
