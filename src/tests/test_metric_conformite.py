@@ -722,8 +722,8 @@ class TestConformiteFK:
             [("c", "z"), ("a", "x"), ("b", "y")],
             ("s1", "s2"),
         )
-        assert result["column_1"].to_list() == ["c", "a", "b"]
-        assert result["column_2"].to_list() == ["z", "x", "y"]
+        assert result["column_name_1"].to_list() == ["c", "a", "b"]
+        assert result["column_name_2"].to_list() == ["z", "x", "y"]
 
     def test_output_height_matches_columns(self):
         df1 = pl.DataFrame({"a": ["x"], "b": ["y"], "c": ["z"]})
@@ -764,8 +764,8 @@ class TestConformiteFK:
         assert result.columns == [
             "source_1",
             "source_2",
-            "column_1",
-            "column_2",
+            "column_name_1",
+            "column_name_2",
             "fk_percent",
             "timestamp",
         ]
@@ -786,8 +786,8 @@ class TestConformiteFK:
         df1 = pl.DataFrame({"foo": ["x"]})
         df2 = pl.DataFrame({"bar": ["x"]})
         result = foreign_key_validity(df1, df2, [("foo", "bar")], ("s1", "s2"))
-        assert result["column_1"].to_list() == ["foo"]
-        assert result["column_2"].to_list() == ["bar"]
+        assert result["column_name_1"].to_list() == ["foo"]
+        assert result["column_name_2"].to_list() == ["bar"]
 
     def test_empty_source_strings(self):
         df1 = pl.DataFrame({"a": ["x"]})
