@@ -1,8 +1,10 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import polars as pl
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import task, task_group
+from polars import DataFrame
 
 from metrics.conformite import (
     expand_foreign_key_validity,
@@ -94,36 +96,43 @@ def conformite_interval_assessment(
 def conformite_foreign_key_assessment(
     cfg: CONFORMITE_FK_ALL_TYPE, data_dir: Path, df_w: DfWriter
 ) -> None:
-    """`cfg` = (exact FK, fuzzy FK, address FK)"""
-    cfg_exact, cfg_fuzzy, cfg_adresse = cfg
+    """
+    `cfg` = (exact FK, fuzzy FK, address FK)
+    """
 
-    def read(name: str) -> pl.DataFrame:
-        return DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read()
+    cfg_exact, cfg_fuzzy, cfg_adresse = cfg
+    read_pqt: Callable[[str], DataFrame] = lambda file_name: DfReader(
+        data_dir / f"{file_name}.parquet", FileType.PARQUET
+    ).read()
 
     dfs = [
-        fn(read(name_1), read(name_2), columns, (name_1, name_2))
+        fn(read_pqt(name_1), read_pqt(name_2), columns, (name_1, name_2))
         for fn, cfg_fk in (
             (foreign_key_validity, cfg_exact),
             (fuzzy_foreign_key_validity, cfg_fuzzy),
         )
         for (name_1, name_2), columns in cfg_fk.items()
-    ] + [
-        expand_foreign_key_validity(
-            read(name_1),
-            read(name_2),
-            column,
-            extractions,
-            replace_patterns,
-            keys,
-            (name_1, name_2),
-        )
-        for (name_1, name_2), (
-            column,
-            extractions,
-            replace_patterns,
-            keys,
-        ) in cfg_adresse.items()
     ]
+
+    dfs.extend(
+        [
+            expand_foreign_key_validity(
+                read_pqt(name_1),
+                read_pqt(name_2),
+                column,
+                extractions,
+                replace_patterns,
+                keys,
+                (name_1, name_2),
+            )
+            for (name_1, name_2), (
+                column,
+                extractions,
+                replace_patterns,
+                keys,
+            ) in cfg_adresse.items()
+        ]
+    )
 
     df_union = pl.concat(dfs, how="vertical")
 
