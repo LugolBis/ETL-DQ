@@ -16,7 +16,12 @@ from orchestration.tasks.enums import FileType
 from orchestration.tasks.models import DfReader, DfWriter
 
 type CONFORMITE_FMT_TYPE = dict[str, list[tuple[list[str], str]]]
-type CONFORMITE_LABEL_TYPE = dict[str, tuple[list[str], list[str | int | float]]]
+type CONFORMITE_LABEL_TYPE = dict[
+    str,
+    tuple[list[str], list[float]]
+    | tuple[list[str], list[int]]
+    | tuple[list[str], list[str]],
+]
 type CONFORMITE_INTERVAL_TYPE = dict[str, list[tuple[str, str, str]]]
 type CONFORMITE_FK_TYPE = dict[tuple[str, str], list[tuple[str, str]]]
 # (address column, extractions, replace_patterns, keys)

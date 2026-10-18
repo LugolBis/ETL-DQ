@@ -8,7 +8,7 @@ from orchestration.tasks.data_quality.conformite import (
 from orchestration.tasks.transform.helpers import ADRESSE_EXTRACTIONS
 
 # "Paris, 20 rue Arthur Groussier"
-ADRESSE_PARIS_REGEX = r"^Paris, \d+ rue .+\S$"
+ADRESSE_PARIS_REGEX = r"^Paris, \d+ (?:rue|avenue|av\.|boulevard|bd\.|place|impasse|allée|passage|quai|faubourg|cours|cité|square|villa|route|chemin|sentier) .+\S$"
 
 # "Evry-Courcouronnes, 91000, 19 Boulevard Aguado" (the number can be "2bis")
 ADRESSE_EVRY_REGEX = r"^Evry-Courcouronnes, \d{5}, \d+(bis|ter)? .+\S$"

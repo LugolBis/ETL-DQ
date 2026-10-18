@@ -34,7 +34,10 @@ def text_format(
 
 
 def label_set(
-    df: DataFrame, columns: list[str], labels: list[str | int | float], source: str
+    df: DataFrame,
+    columns: list[str],
+    labels: list[str] | list[float] | list[int],
+    source: str,
 ) -> DataFrame:
     n = df.height
     timestamp = datetime.now(ZoneInfo("UTC"))
