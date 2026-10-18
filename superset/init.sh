@@ -15,4 +15,9 @@ superset init
 echo "Add the DuckDB connexion Déclaration de la connexion DuckDB"
 superset set-database-uri -d "DuckDB" -u "duckdb:///:memory:"
 
+echo "Import the dashboard (if the file exists)"
+if [ -f /app/dashboards/qualite_des_donnees.zip ]; then
+  superset import-dashboards -p /app/dashboards/qualite_des_donnees.zip -u "${SUPERSET_ADMIN_USER}"
+fi
+
 echo "Init completed."

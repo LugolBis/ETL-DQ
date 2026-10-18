@@ -47,6 +47,7 @@ x-superset-common: &superset-common
   volumes:
     - .superset_home:/app/superset_home # contains the SQLite database that store the meta data
     - ./airflow/.data:/data:ro
+    - ./superset/dashboards:/app/dashboards:ro
 
 services:
   postgres:
