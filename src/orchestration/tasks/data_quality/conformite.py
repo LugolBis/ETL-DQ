@@ -5,7 +5,7 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import task, task_group
 
 from metrics.conformite import (
-    address_foreign_key_validity,
+    expand_foreign_key_validity,
     foreign_key_validity,
     fuzzy_foreign_key_validity,
     interval_validity,
@@ -103,7 +103,7 @@ def conformite_foreign_key_assessment(
         )
         for (name_1, name_2), columns in cfg_fk.items()
     ] + [
-        address_foreign_key_validity(
+        expand_foreign_key_validity(
             read(name_1),
             read(name_2),
             column,

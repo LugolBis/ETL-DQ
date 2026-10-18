@@ -65,10 +65,7 @@ def interval_validity(
     casts = []
     for column in to_cast:
         casts.append(
-            pl.col(column)
-            .cast(pl.String)
-            .str.replace_all(r"\s+", "")
-            .cast(pl.Float64)
+            pl.col(column).cast(pl.String).str.replace_all(r"\s+", "").cast(pl.Float64)
         )
 
     df = df.with_columns(casts)
@@ -173,7 +170,7 @@ def fuzzy_foreign_key_validity(
     return result.with_columns(pl.lit(timestamp).alias("timestamp"))
 
 
-def address_foreign_key_validity(
+def expand_foreign_key_validity(
     df1: DataFrame,
     df2: DataFrame,
     column: str,
@@ -183,6 +180,10 @@ def address_foreign_key_validity(
     sources: tuple[str, str],
 ) -> DataFrame:
     """
+    The function use `expand_column(df1, column, extractions, replace_patterns)` before joining the result to `df2`
+     and infer `dtypes` from `df2`.
+    !! We assume here that `df1` don't have columns with the names `keys` (if it is they will be overwritten),
+    `df2` need to contains the `keys` columns.
     The address `column` of `df1` is split with `expand_column` (ex: N, Nom_Rue, Code_Postal),
     then we check the percent of rows whose `keys` all exist together in `df2`.
     """
