@@ -445,6 +445,17 @@ La **Cohérence** mesure la validité des relations entre les données.
 > - Comment déterminer le paramètre `perplexity` de l'algorithme _t-SNE_ à partir du nombre de rows ?
 > - Discuter du nombre de dimensions des embeddings, pour trouver un équilibre entre temps d'exécution et précision.
 
+## Dashboard
+
+Le dashboard présente les mesures de 4 facettes : Complétude, Unicité, Conformité et Hétérogénéité. Il est construit avec _Superset_, qui interroge les résultats des métriques écrits par le DAG `data_quality_assessment`.
+
+<img width="800" src="doc/img/dashboard.png" />
+
+
+### Mise en place
+
+Le dashboard est exporté dans `superset/dashboards/qualite_des_donnees.zip` et importé automatiquement par `superset/init.sh` au démarrage de Superset (http://localhost:8088). Il reste vide tant que `data_quality_assessment` n'a pas été exécuté. Pour le mettre à jour dans le dépôt, il faut le ré-exporter depuis Superset (_Dashboards_ -> _Export_) et remplacer le zip.
+
 ## Amélioration de la Qualité de données
 
 ### Facettes & Solutions d'imputation :
