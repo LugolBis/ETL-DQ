@@ -1,6 +1,6 @@
 import re
-from collections.abc import Mapping, Sequence
-from typing import Literal
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, Literal
 
 import polars as pl
 from polars import DataFrame
@@ -148,3 +148,34 @@ def expand_column(
     result = df.with_columns(exprs)
 
     return result
+
+
+def cast_columns(
+    columns: Sequence[str],
+    target_type: Any,
+    replacement_pattern: tuple[str, str] | None,
+) -> Callable[[DataFrame], DataFrame]:
+    r"""
+    /!\ We assume that the `columns` are in the target DataFrame who will be passed in argument of the returned function.
+    Args :
+        target_type: is a Polars DataType such as pl.Int64 | pl.Float64 | etc.
+
+        replacement_pattern: is the pairs (pattern, replace_with) wich is used to modify String columns.
+    """
+
+    def inner_cast(df: DataFrame) -> DataFrame:
+        expressions = []
+
+        for column in columns:
+            expr = pl.col(column)
+
+            if df.schema[column] == pl.String and replacement_pattern:
+                expr = expr.str.replace_all(
+                    replacement_pattern[0], replacement_pattern[1]
+                )
+
+            expressions.append(expr.cast(target_type).alias(column))
+
+        return df.with_columns(expressions)
+
+    return inner_cast
