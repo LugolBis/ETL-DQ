@@ -5,7 +5,9 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import task, task_group
 
 from metrics.conformite import (
+    address_foreign_key_validity,
     foreign_key_validity,
+    fuzzy_foreign_key_validity,
     interval_validity,
     label_set,
     text_format,
@@ -17,6 +19,13 @@ type CONFORMITE_FMT_TYPE = dict[str, list[tuple[list[str], str]]]
 type CONFORMITE_LABEL_TYPE = dict[str, tuple[list[str], list[str | int | float]]]
 type CONFORMITE_INTERVAL_TYPE = dict[str, list[tuple[str, str, str]]]
 type CONFORMITE_FK_TYPE = dict[tuple[str, str], list[tuple[str, str]]]
+# (address column, extractions, replace_patterns, keys)
+type CONFORMITE_FK_ADRESSE_TYPE = dict[
+    tuple[str, str], tuple[str, list[tuple[str, str]], list[tuple[str, str]], list[str]]
+]
+type CONFORMITE_FK_ALL_TYPE = tuple[
+    CONFORMITE_FK_TYPE, CONFORMITE_FK_TYPE, CONFORMITE_FK_ADRESSE_TYPE
+]
 
 
 @task()
@@ -78,16 +87,37 @@ def conformite_interval_assessment(
 
 @task()
 def conformite_foreign_key_assessment(
-    cfg: CONFORMITE_FK_TYPE, data_dir: Path, df_w: DfWriter
+    cfg: CONFORMITE_FK_ALL_TYPE, data_dir: Path, df_w: DfWriter
 ) -> None:
+    """`cfg` = (exact FK, fuzzy FK, address FK)"""
+    cfg_exact, cfg_fuzzy, cfg_adresse = cfg
+
+    def read(name: str) -> pl.DataFrame:
+        return DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read()
+
     dfs = [
-        foreign_key_validity(
-            DfReader(data_dir / f"{name_1}.parquet", FileType.PARQUET).read(),
-            DfReader(data_dir / f"{name_2}.parquet", FileType.PARQUET).read(),
-            columns,
+        fn(read(name_1), read(name_2), columns, (name_1, name_2))
+        for fn, cfg_fk in (
+            (foreign_key_validity, cfg_exact),
+            (fuzzy_foreign_key_validity, cfg_fuzzy),
+        )
+        for (name_1, name_2), columns in cfg_fk.items()
+    ] + [
+        address_foreign_key_validity(
+            read(name_1),
+            read(name_2),
+            column,
+            extractions,
+            replace_patterns,
+            keys,
             (name_1, name_2),
         )
-        for (name_1, name_2), columns in cfg.items()
+        for (name_1, name_2), (
+            column,
+            extractions,
+            replace_patterns,
+            keys,
+        ) in cfg_adresse.items()
     ]
 
     df_union = pl.concat(dfs, how="vertical")
@@ -101,7 +131,7 @@ def conformite_assessment(
         CONFORMITE_FMT_TYPE,
         CONFORMITE_LABEL_TYPE,
         CONFORMITE_INTERVAL_TYPE,
-        CONFORMITE_FK_TYPE,
+        CONFORMITE_FK_ALL_TYPE,
     ],
     data_dir: Path,
     df_ws: tuple[DfWriter, DfWriter, DfWriter, DfWriter],

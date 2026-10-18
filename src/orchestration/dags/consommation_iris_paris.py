@@ -53,7 +53,7 @@ def consommation_iris_paris():
             .alias("Code_Postal")
         )
         .join(
-            df_b.rename({"ID_IRIS": "ID_Iris"}),
+            df_b,
             left_on=["Nom_Rue", "Code_Postal"],
             right_on=["ID_Rue", "ID_Ville"],
             how="inner",

@@ -1,8 +1,11 @@
+from collections.abc import Sequence
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import polars as pl
 from polars import DataFrame
+
+from orchestration.tasks.transform.helpers import expand_column, fuzzy_join
 
 
 def text_format(
@@ -53,6 +56,22 @@ def interval_validity(
 ) -> DataFrame:
     n = df.height
     timestamp = datetime.now(ZoneInfo("UTC"))
+
+    to_cast = set()
+    for column_group in columns:
+        for column in column_group:
+            to_cast.add(column)
+
+    casts = []
+    for column in to_cast:
+        casts.append(
+            pl.col(column)
+            .cast(pl.String)
+            .str.replace_all(r"\s+", "")
+            .cast(pl.Float64)
+        )
+
+    df = df.with_columns(casts)
 
     exprs: list[pl.Expr] = []
     for c0, c1, c2 in columns:
@@ -118,3 +137,78 @@ def foreign_key_validity(
     )
 
     return result.with_columns(pl.lit(timestamp).alias("timestamp"))
+
+
+def fuzzy_foreign_key_validity(
+    df1: DataFrame,
+    df2: DataFrame,
+    columns: list[tuple[str, str]],
+    sources: tuple[str, str],
+) -> DataFrame:
+    """
+    Same output as `foreign_key_validity`, but a value of `df1` is valid if it
+    matches a value of `df2` with `fuzzy_join` (ex: "Cadre" -> "Cadres et professions ...").
+    """
+
+    n = df1.height
+    timestamp = datetime.now(ZoneInfo("UTC"))
+    src1, src2 = sources
+
+    result = pl.DataFrame(
+        [
+            {
+                "source_1": src1,
+                "source_2": src2,
+                "column_name_1": col1,
+                "column_name_2": col2,
+                "fk_percent": fuzzy_join(
+                    df1.select(col1), df2.select(col2), col1, col2, how="inner"
+                ).height
+                / n,
+            }
+            for col1, col2 in columns
+        ]
+    )
+
+    return result.with_columns(pl.lit(timestamp).alias("timestamp"))
+
+
+def address_foreign_key_validity(
+    df1: DataFrame,
+    df2: DataFrame,
+    column: str,
+    extractions: Sequence[tuple[str, str]],
+    replace_patterns: Sequence[tuple[str, str]],
+    keys: list[str],
+    sources: tuple[str, str],
+) -> DataFrame:
+    """
+    The address `column` of `df1` is split with `expand_column` (ex: N, Nom_Rue, Code_Postal),
+    then we check the percent of rows whose `keys` all exist together in `df2`.
+    """
+
+    n = df1.height
+    timestamp = datetime.now(ZoneInfo("UTC"))
+    src1, src2 = sources
+
+    df1_expanded = expand_column(
+        df1,
+        column,
+        extractions,
+        replace_patterns,
+        dtypes={key: df2.schema[key] for key in keys},
+    )
+    matched = df1_expanded.join(
+        df2.select(keys).unique(), on=keys, how="semi", nulls_equal=False
+    ).height
+
+    return pl.DataFrame(
+        {
+            "source_1": [src1],
+            "source_2": [src2],
+            "column_name_1": [column],
+            "column_name_2": [", ".join(keys)],
+            "fk_percent": [matched / n],
+            "timestamp": [timestamp],
+        }
+    )

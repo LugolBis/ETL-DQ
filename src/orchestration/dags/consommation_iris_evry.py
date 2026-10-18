@@ -45,7 +45,7 @@ def consommation_iris_evry():
         *df_readers,
         func=lambda df_a, df_b: fuzzy_join(
             df_a,
-            df_b.rename({"ID_IRIS": "ID_Iris"}),
+            df_b,
             "Nom_Rue",
             "ID_Rue",
             "column_2",

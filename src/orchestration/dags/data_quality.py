@@ -8,7 +8,9 @@ from airflow.sdk import dag
 from orchestration.dags.cfg.coherence import COHRENCE_CFG
 from orchestration.dags.cfg.completude import COMPLETUDE_CFG
 from orchestration.dags.cfg.conformite import (
+    CONFORMITE_FK_ADRESSE_CFG,
     CONFORMITE_FK_CFG,
+    CONFORMITE_FK_FUZZY_CFG,
     CONFORMITE_FMT_CFG,
     CONFORMITE_INTERVAL_CFG,
     CONFORMITE_LABEL_CFG,
@@ -97,7 +99,7 @@ def data_quality_assessment():
             CONFORMITE_FMT_CFG,
             CONFORMITE_LABEL_CFG,
             CONFORMITE_INTERVAL_CFG,
-            CONFORMITE_FK_CFG,
+            (CONFORMITE_FK_CFG, CONFORMITE_FK_FUZZY_CFG, CONFORMITE_FK_ADRESSE_CFG),
         ),
         DATA_DIR,
         (

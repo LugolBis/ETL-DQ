@@ -18,7 +18,9 @@ def unicite_assessment(
         compute_unicite(
             pl.concat(
                 [
-                    DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read()
+                    DfReader(
+                        data_dir / f"{name}.parquet", FileType.PARQUET, columns=columns
+                    ).read()
                     for name in names
                 ],
             ),
