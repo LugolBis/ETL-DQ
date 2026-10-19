@@ -61,16 +61,6 @@ $R_{3,3} = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, \verb|NB_KW_Jour|}\big(R
 $R_{3,4} = \gamma_{\verb|CSP| \to \verb|ID_CSP|, \verb|Salaire_Moyen|, \verb|NB_KW_Jour|}\big(R_{3,2} \Join_{R_{3,2}.CSP = \verb|CSP3.ID_CSP| } Source3.CSP\big)$
 $\verb|Consommation_CSP| = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_{3,3} \cup R_{3,4})$
 
-### Hypothèses de clés étrangères
-
-| SourceA.Colonne                                                  | SourceB.Colonne             |
-| ---------------------------------------------------------------- | --------------------------- |
-| Source1.Population.Adresse                                       | Source1.Consommation.ID_Adr |
-| Source2.Population.Adresse                                       | Source2.Consommation.ID_Adr |
-| Source1.Population.CSPSource2.Population.CSP                     | Source3.CSP.ID_CSP          |
-| Source1.Consommation.Nom_RueSource2.Consommation.Nom_Rue         | Source4.IRIS.ID_Rue         |
-| Source1.Consommation.Code_PostalSource2.Consommation.Code_Postal | Source4.IRIS.ID_Ville       |
-
 ### Requêtes
 
 - **Consommation_IRIS_Paris** (Source1 &#10781; Source4) :
