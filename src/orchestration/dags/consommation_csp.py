@@ -58,6 +58,7 @@ def consommation_csp():
         ("extract_source3", [DATA_DIR / "csp3.parquet"]),
     )
 
+    # TODO: If it break : improve the 'rue' replacement to support other voie type such as 'boulevard', etc.
     fn_join_pop_conso1: Callable[[DataFrame, DataFrame], DataFrame] = (
         lambda df_pop, df_conso: expand_column(
             df_pop,

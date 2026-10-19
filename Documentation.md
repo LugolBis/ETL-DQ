@@ -43,30 +43,23 @@ Salaire_Moyen)")]
 
 #### Consommation_IRIS_Paris
 
-$R_1 = Source1.Consommation \Join_{\verb|C.Nom_Rue| = \verb|I.ID_Rue| \land \verb|C.Code_Postal| = \verb|I.ID_Ville|} Source4.IRIS$
+$R_1 = Source1.Consommation \Join_{\verb|C.Nom_Rue| = \verb|I.ID_Rue| \land \verb|map_as_city(C.Code_Postal)| = \verb|I.ID_Ville|} Source4.IRIS$
 
 $\verb|Consommation_IRIS_Paris| = \rho_{\verb|ID_Iris| \to \verb|ID_IRIS|} \big(\gamma_{\verb|ID_Iris| ; AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_1)\big)$
 
 #### Consommation_IRIS_Evry
 
-$R_2 = Source2.Consommation \Join_{\verb|C.Nom_Rue| = \verb|I.ID_Rue| \land \verb|C.Code_Postal| = \verb|I.ID_Ville|} Source4.IRIS$
+$R_2 = Source2.Consommation \Join_{\verb|I.ID_Rue| \preceq \verb|C.Nom_Rue|  \land \verb|C.Code_Postal| = \verb|I.ID_Ville|} Source4.IRIS$
 
 $\verb|Consommation_IRIS_Evry| = \rho_{\verb|ID_Iris| \to \verb|ID_IRIS|} \big(\gamma_{\verb|ID_Iris| ; AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_2)\big)$
 
 #### Consommation_CSP
 
-$R_3 = \big(Source1.Population \Join_{\verb|P1.Adresse| = \verb|C1.ID_Adr|} Source1.Consommation\big) \cup \big(Source2.Population \Join_{\verb|P2.Adresse| = \verb|C2.ID_Adr|} Source2.Consommation\big)$
-
-où :
-
-- `P1` = `Source1.Population`
-- `C1` = `Source1.Consommation`
-- `P2` = `Source2.Population`
-- `C2` = `Source2.Consommation`
-
-$R_4 = R_3 \Join_{\verb|R3.CSP| = \verb|C.ID_CSP|} Source3.CSP$
-
-$\verb|Consommation_CSP| = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_4)$
+$R_{3,1} = \big(Source1.Population \Join_{\verb|extract_adr(P1.Adresse, {N, Nom_Rue})| = (\verb|C1.N|, \verb|C1.Nom_Rue|)} Source1.Consommation\big)$
+$R_{3,2} = \big(Source2.Population \Join_{\verb|extract_adr(P2.Adresse, {N, Nom_Rue, Code_Postal})| = (\verb|C2.N|, \verb|C2.Nom_Rue|, \verb|C2.Code_Postal|)} Source2.Consommation\big)$
+$R_{3,3} = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, \verb|NB_KW_Jour|}\big(R_{3,1} \Join_{R_{3,1}.CSP \preceq \verb|CSP3.Desc| } Source3.CSP\big)$
+$R_{3,4} = \gamma_{\verb|CSP| \to \verb|ID_CSP|, \verb|Salaire_Moyen|, \verb|NB_KW_Jour|}\big(R_{3,2} \Join_{R_{3,2}.CSP = \verb|CSP3.ID_CSP| } Source3.CSP\big)$
+$\verb|Consommation_CSP| = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_{3,3} \cup R_{3,4})$
 
 ### Hypothèses de clés étrangères
 
