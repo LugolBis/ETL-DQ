@@ -68,30 +68,34 @@ def fuzzy_join(
         tags = _tags_of(df2_idx, column_2, id2, tag)
         refs = _refs_of(df1_idx, column_1, id1, ref)
 
-    pairs = tags.join_where(
-        refs,
-        pl.col(ref).str.contains(pl.col(tag), literal=True),
-    ).select(id1, id2)
+    # All the (id1, id2) pairs without duplicates
+    pairs = (
+        tags.join_where(
+            refs,
+            pl.col(ref).str.contains(pl.col(tag), literal=True),
+        )
+        .select(id1, id2)
+        .unique()
+    )
 
-    if how in ("left", "inner"):
-        # One match (smallest id2) per df1 row
-        best = pairs.group_by(id1).agg(pl.col(id2).min())
-        result = (
-            df1_idx.join(best, on=id1, how=how)
-            .join(df2_idx, on=id2, how="left")
-            .sort(id1)
+    if how == "inner":
+        result = pairs.join(df1_idx, on=id1, how="inner").join(
+            df2_idx, on=id2, how="inner"
         )
-    else:  # right
-        best = df2_idx.select(id2).join(
-            pairs.group_by(id2).agg(pl.col(id1).min()), on=id2, how="left"
+        sort_col = id1
+    elif how == "left":
+        result = df1_idx.join(pairs, on=id1, how="left").join(
+            df2_idx, on=id2, how="left"
         )
-        result = (
-            df1_idx.join(best, on=id1, how="right", coalesce=True)
-            .join(df2_idx, on=id2, how="left")
-            .sort(id2)
+        sort_col = id1
+    else:
+        # Default is 'right' join
+        result = df2_idx.join(pairs, on=id2, how="left").join(
+            df1_idx, on=id1, how="left"
         )
+        sort_col = id2
 
-    return result.drop(id1, id2)
+    return result.sort(sort_col).drop(id1, id2)
 
 
 def expand_column(
