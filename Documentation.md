@@ -210,9 +210,13 @@ Métriques :
     
     On a donc :
     
-    Soit $\mathcal{C}_{fk} \subseteq C_1 \times C_2$; $\mathcal{C}_{exp} \subseteq C_1 \times C_2 \times \Theta$; $\mathcal{C}_{fuz} \subseteq C_1 \times C_2$
+    $\mathcal{C}_{fk} \subseteq C_1 \times C_2$
 
-    $\Phi^{fk}(R_1, R_2, \mathcal{C}) = \bigcup_{(C_1,C_2)\in\mathcal{C}_{fk}} \bigl\{\phi^{fk}(R_1,R_2,C_1,C_2)\bigr\} \;\cup\; \bigcup_{(C_1,C_2,\theta)\in\mathcal{C}_{exp}} \bigl\{\phi^{fk}_{exp}(R_1,R_2,C_1,C_2,\theta)\bigr\} \;\cup\; \bigcup_{(C_1,C_2)\in\mathcal{C}_{fuz}} \bigl\{\phi^{fk}_{fuz}(R_1,R_2,C_1,C_2)\bigr\}$
+    $\mathcal{C}_{exp} \subseteq C_1 \times C_2 \times \Theta$
+
+    $\mathcal{C}_{fuz} \subseteq C_1 \times C_2$
+
+    $\Phi_{fk}(R_1, R_2, \mathcal C) = \bigcup\limits_{(C_1,C_2)\in\mathcal C_{fk}} \bigl\lbrace\phi^{fk}(R_1,R_2,C_1,C_2)\bigr\rbrace \cup \bigcup\limits_{(C_1,C_2,\theta)\in\mathcal C_{exp}} \bigl\lbrace\phi_{exp}^{fk}(R_1,R_2,C_1,C_2,\theta)\bigr\rbrace \cup \bigcup\limits_{(C_1,C_2)\in\mathcal C_{fuz}} \bigl\lbrace\phi_{fuz}^{fk}(R_1,R_2,C_1,C_2)\bigr\rbrace$
 
 #### Hétérogénéité des échelles
 
