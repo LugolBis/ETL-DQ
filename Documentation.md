@@ -275,27 +275,34 @@ Métriques :
 L'**Unicité** mesure la redondance d'une base de données.
 
 - Doublons extra sources :
+  + Concept :\
+    Détection de doublons générés par la jointure de deux sources :
+    - &forall; _x_ &#8712; (`Source1.Population` &#8746; `Source2.Population`), _x_ est unique.
 
-  Détection de doublons générés par la jointure de deux sources :
-
-  - &forall; _x_ &#8712; (`Source1.Population` &#8746; `Source2.Population`), _x_ est unique.
-
-  Exemple : Dans (`Source1.Population` &#8746; `Source2.Population`), si deux lignes partagent le même `(Nom, Prénom)` avec une adresse différente : doublon. Il pourrait ici s'agir de quelqu'un qui à déménagé.
+    Exemple : Dans (`Source1.Population` &#8746; `Source2.Population`), si deux lignes partagent le même `(Nom, Prénom)` avec une adresse différente : doublon. Il pourrait ici s'agir de quelqu'un qui à déménagé.
+  + Formalisme :\
+    Voir ci-après.
 - Doublons intra sources :
+  + Concept :\
+    Détection de doublons partiel (à partir d'un sous ensemble d'attributs) :
 
-  Détection de doublons partiel (à partir d'un sous ensemble d'attributs) :
+    - `Source1.Population.(Nom, Prénom)`
+    - `Source2.Population.(Nom, Prénom)`
+    - `Source1.Consommation.(N, Nom_Rue, Code_Postal)`
+    - `Source2.Consommation.(N, Nom_Rue, Code_Postal)`
+    - `Source3.CSP.Salaire_Moyen`
+    - `Source3.CSP.(Salaire_Min, Salaire_Max)`
+    - `Source4.IRIS.ID_Iris`
 
-  - `Source1.Population.(Nom, Prénom)`
-  - `Source2.Population.(Nom, Prénom)`
-  - `Source1.Consommation.(N, Nom_Rue, Code_Postal)`
-  - `Source2.Consommation.(N, Nom_Rue, Code_Postal)`
-  - `Source3.CSP.Salaire_Moyen`
-  - `Source3.CSP.(Salaire_Min, Salaire_Max)`
-  - `Source4.IRIS.ID_Iris`
+    Exemple : Dans `Source.Consommation`, si deux lignes partagent le même `(N, Nom_Rue, Code_Postal)` avec des `NB_KW_Jour` différents : doublon.
 
-  Exemple : Dans `Source.Consommation`, si deux lignes partagent le même `(N, Nom_Rue, Code_Postal)` avec des `NB_KW_Jour` différents : doublon.
+    → Hypothèse: Une adresse représente un et un seul logement.
 
-  → Hypothèse: Une adresse représente un et un seul logement.
+  + Formalisme :\
+    Soit $R$ une relation tel que $|R| = N$ et $C$ est l'ensemble des attributs de $R$.\
+    On a $freq(R, C_{k}, value) = |\{t \in R: \pi_{C_k}(t) = value\}|$\
+    Tel que $\phi_{uniq}(R, C) = \{\frac{1}{N} \sum_{t \in R}1[freq(R, C', \pi_{C'}(t)) = 1]\}_{C' \subseteq C}$\
+    On mesure ici la proportion de lignes uniques.
 
 #### Cohérence
 
