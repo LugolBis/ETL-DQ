@@ -127,57 +127,88 @@ La **Conformité** mesure la validité du format des données.
 Métriques :
 
 - Format des chaînes de caractères :
+  + Concept :\
+    Évaluation de REGEX pour vérifier le format des données suivantes :
 
-  Évaluation de REGEX pour vérifier le format des données suivantes :
+    - `Source1.Population.Adresse`
+    - `Source2.Population.Adresse`
+    - `Source1.Consommation.ID_Adr`
+    - `Source2.Consommation.ID_Adr`
+    - `Source1.Consommation.Nom_Rue`
+    - `Source2.Consommation.Nom_Rue`
+    - `Source4.IRIS.ID_Rue`
 
-  - `Source1.Population.Adresse`
-  - `Source2.Population.Adresse`
-  - `Source1.Consommation.ID_Adr`
-  - `Source2.Consommation.ID_Adr`
-  - `Source1.Consommation.Nom_Rue`
-  - `Source2.Consommation.Nom_Rue`
-  - `Source4.IRIS.ID_Rue`
-
-  Exemple : `Source1.Population.Adresse` = '12' est invalide.
+    Exemple : `Source1.Population.Adresse` = '12' est invalide.
+  + Formalisme :\
+    Soit $R$ la relation tel que $|R| = N$, $C$ l'ensemble des attributs de $R$, tel que $C' \subseteqq C$ et $P$ l'ensemble des formats attendu.\
+    On a $\phi_{p}(c, R) = \frac{1}{N} \sum_{t \in R} 1[match(t[c], p)] \in [0, 1]$\
+    Tel qu'on obtient les scores au plus petit niveau de granularité (1 ligne / colonne et format) :\
+    $\forall p \in P$ on a $\{ \phi_p(c, R) \}_{c \in C' }$
 - Ensemble fini de données (labels) :
+  + Concept :\
+    Évaluation de l'appartenance de l'ensemble des données _X_ à un ensemble prédéfinis de labels _Y_ :
 
-  Évaluation de l'appartenance de l'ensemble des données _X_ à un ensemble prédéfinis de labels _Y_ :
+    - `Source1.Population.CSP`
+    - `Source2.Population.CSP`
+    - `Source3.CSP.ID_CSP`
+    - `Source1.Population.Code_Postal`
+    - `Source2.Population.Code_Postal`
+    - `Source4.IRIS.ID_Ville`
 
-  - `Source1.Population.CSP`
-  - `Source2.Population.CSP`
-  - `Source3.CSP.ID_CSP`
-  - `Source1.Population.Code_Postal`
-  - `Source2.Population.Code_Postal`
-  - `Source4.IRIS.ID_Ville`
-
-  Exemple :
-  `Source3.CSP.ID_CSP` &#8838; {
-  "agriculteurs exploitants",
-  "artisans, commerçants et chefs d’entreprise",
-  "cadres et professions intellectuelles supérieures",
-  "professions intermédiaires",
-  "employés",
-  "ouvriers",
-  "retraités",
-  "autres personnes sans activité professionnelle",
-  }
+    Exemple :
+    `Source3.CSP.ID_CSP` &#8838; {
+    "agriculteurs exploitants",
+    "artisans, commerçants et chefs d’entreprise",
+    "cadres et professions intellectuelles supérieures",
+    "professions intermédiaires",
+    "employés",
+    "ouvriers",
+    "retraités",
+    "autres personnes sans activité professionnelle",
+    }
+  + Formalisme :\
+    Soit $R$ la relation tel que $|R| = N$, $C$ l'ensemble des attributs de $R$, tel que $C' \subseteqq C$ et $L$ un ensemble de données attendues.\
+    On a $\phi_{L}(c, R) = \frac{1}{N} \sum_{t \in R} 1[t[c] \in L] \in [0, 1]$\
+    Tel qu'on obtient les scores au plus petit niveau de granularité (1 ligne / colonne et ensemble de données) :\
+    $\forall L$ on a $\{ \phi_L(c, R) \}_{c \in C' }$
 - Validité d'intervalles de données :
+  + Concept :\
+    On compare les inégalitées d'une relation ternaire.\
+    Tel que &forall; _t_ &#8712; `Source3.CSP` vérifie _t[Salaire\_Min]_ <= _t[Salaire\_Moyen]_ <= _t[Salaire\_Max]_
 
-  &forall; _t_ &#8712; _T_, on a _y_ <= _t[x]_ <= _z_ :
+  + Formalisme:\
+    Soit $R$ la relation tel que $|R| = N$, $C$ l'ensemble des attributs de $R$, tel qu'on a $x, y, z \in C^3$ avec $x \neq y \neq z$.\
+    $\phi(x, y, z) = 1 - \frac{1}{N} \sum_{t \in R} 1[\neg (t[x] <= t[y] <= t[z])]$
 
-  - Tel que &forall; _t_ &#8712; `Source3.CSP` vérifie _t[Salaire\_Min]_ <= _t[Salaire\_Moyen]_ <= _t[Salaire\_Max]_
-
-  L'idée est d'avoir une métrique flexible permetant de définir _y_ et _z_ statiquement u dynamiquement.
 - Validité des formats extra sources :
+  + Concept :\
+    Vérification de la validité des clés étrangères :
 
-  Vérification de la validité des clés étrangères :
+    - set(`Source1.Consommation.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
+    - set(`Source2.Consommation.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
+    - set(`Source1.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
+    - set(`Source2.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
 
-  - set(`Source1.Consommation.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
-  - set(`Source2.Consommation.Code_Postal`) &#8838; set(`Source4.IRIS.ID_Ville`)
-  - set(`Source1.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
-  - set(`Source2.Population.CSP`) &#8838; set(`Source3.ID_CSP`)
+    Exemple : `Source1.Population.CSP` doit appartenir à l'ensemble des `ID_CSP` définis dans `Source3.CSP`, sinon la donnée serait invalide.
+  
+  + Formalisme :\
+    Soit $R_1$, $R_2$ deux relations tel que $|R_1| = N_1$ et $C_1$ l'ensemble des attributs de $R_1$ (resp. $C_2$ pour $R_2$).\
+    \
+    Extraction :\
+    Soit $Exp(.; C_1, \theta) : R_1 \rightarrow R_1'$ le prétraitrement composé de l'extraction $\theta$ qui à partir de $C_1 \subseteq R_1$ produit les colonnes $K$. Tel que $\theta$ assure $K = C_2$\
+    \
+    Fuzzy Join :\
+    Soit $Fuzzy(R_1, R_2, C_1, C_2) = \{t_1 \in R_1 : \exists t_2 \in R_2, t_2[C_2] \unrhd t_1[C_1] \}$\
+    \
+    Calcul de la métrique :\
+    $\phi^{fk}(R_1, R_2, C_1, C_2) = \frac{1}{N_1}|\{ t_1 \in R_1 : \exists t_2 \in R_2, t_1[C_1] = t_2[C_2]\}|$\
+    $\phi^{fk}_{exp}(R_1, R_2, C_1, C_2, \theta) = \frac{1}{N_1}|\{ t_1 \in Exp(R_1, C_1, \theta) : \exists t_2 \in R_2, t_1[C_2] = t_2[C_2]\}|$\
+    $\phi^{fk}_{fuz}(R_1, R_2, C_1, C_2) = \frac{1}{N_1}|Fuzzy(R_1, R_2, C_1, C_2)|$\
+    \
+    On a donc :\
+    Soit $\mathcal{C}_{fk} \subseteq C_1 \times C_2$; $\mathcal{C}_{exp} \subseteq C_1 \times C_2 \times \Theta$; $\mathcal{C}_{fuz} \subseteq C_1 \times C_2$
 
-  Exemple : `Source1.Population.CSP` doit appartenir à l'ensemble des `ID_CSP` définis dans `Source3.CSP`, sinon la donnée serait invalide.
+    $\Phi^{fk}(R_1, R_2, \mathcal{C}) = \bigcup_{(C_1,C_2)\in\mathcal{C}_{fk}} \bigl\{\phi^{fk}(R_1,R_2,C_1,C_2)\bigr\} \;\cup\; \bigcup_{(C_1,C_2,\theta)\in\mathcal{C}_{exp}} \bigl\{\phi^{fk}_{exp}(R_1,R_2,C_1,C_2,\theta)\bigr\} \;\cup\; \bigcup_{(C_1,C_2)\in\mathcal{C}_{fuz}} \bigl\{\phi^{fk}_{fuz}(R_1,R_2,C_1,C_2)\bigr\}$
 
 #### Hétérogénéité des échelles
 
