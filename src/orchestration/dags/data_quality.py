@@ -1,11 +1,10 @@
-
 from pathlib import Path
 
 import pendulum
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 
-from orchestration.dags.cfg.coherence import COHRENCE_CFG
+from orchestration.dags.cfg.coherence import COHERENCE_CFG
 from orchestration.dags.cfg.completude import COMPLETUDE_CFG
 from orchestration.dags.cfg.conformite import (
     CONFORMITE_FK_ADRESSE_CFG,
@@ -21,7 +20,6 @@ from orchestration.dags.cfg.heterogeneite import (
     HETEROGENEITE_RATIO_CFG,
 )
 from orchestration.dags.cfg.unicite import UNICITE_CFG
-
 from orchestration.tasks.data_quality.coherence import coherence_assessment
 from orchestration.tasks.data_quality.completude import completude_assessment
 from orchestration.tasks.data_quality.conformite import (
@@ -31,11 +29,9 @@ from orchestration.tasks.data_quality.heterogeneite import (
     heterogeneite_assessment,
 )
 from orchestration.tasks.data_quality.unicite import unicite_assessment
-
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.models import DfWriter
-
 
 DATA_DIR = Path("/opt/airflow/.data")
 DQ_DIR = DATA_DIR / "data_quality"
@@ -85,7 +81,7 @@ def data_quality_assessment():
 
     # 2. Coherence
     task_coherence = coherence_assessment(
-        COHRENCE_CFG,
+        COHERENCE_CFG,
         DATA_DIR,
         DfWriter(
             DQ_DIR / "coherence.parquet",
