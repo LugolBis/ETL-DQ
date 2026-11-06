@@ -200,12 +200,16 @@ Métriques :
     Fuzzy Join :\
     Soit $Fuzzy(R_1, R_2, C_1, C_2) = \{t_1 \in R_1 : \exists t_2 \in R_2, t_2[C_2] \unrhd t_1[C_1] \}$\
     \
-    Calcul de la métrique :\
-    $\phi^{fk}(R_1, R_2, C_1, C_2) = \frac{1}{N_1}|\{ t_1 \in R_1 : \exists t_2 \in R_2, t_1[C_1] = t_2[C_2]\}|$\
-    $\phi^{fk}_{exp}(R_1, R_2, C_1, C_2, \theta) = \frac{1}{N_1}|\{ t_1 \in Exp(R_1, C_1, \theta) : \exists t_2 \in R_2, t_1[C_2] = t_2[C_2]\}|$\
-    $\phi^{fk}_{fuz}(R_1, R_2, C_1, C_2) = \frac{1}{N_1}|Fuzzy(R_1, R_2, C_1, C_2)|$\
-    \
-    On a donc :\
+    Calcul de la métrique :
+    
+    $\phi^{fk}(R_1, R_2, C_1, C_2) = \frac{1}{N_1}|\{ t_1 \in R_1 : \exists t_2 \in R_2, t_1[C_1] = t_2[C_2]\}|$
+    
+    $\phi^{fk}_{exp}(R_1, R_2, C_1, C_2, \theta) = \frac{1}{N_1}|\{ t_1 \in Exp(R_1, C_1, \theta) : \exists t_2 \in R_2, t_1[C_2] = t_2[C_2]\}|$
+
+    $\phi^{fk}_{fuz}(R_1, R_2, C_1, C_2) = \frac{1}{N_1}|Fuzzy(R_1, R_2, C_1, C_2)|$
+    
+    On a donc :
+    
     Soit $\mathcal{C}_{fk} \subseteq C_1 \times C_2$; $\mathcal{C}_{exp} \subseteq C_1 \times C_2 \times \Theta$; $\mathcal{C}_{fuz} \subseteq C_1 \times C_2$
 
     $\Phi^{fk}(R_1, R_2, \mathcal{C}) = \bigcup_{(C_1,C_2)\in\mathcal{C}_{fk}} \bigl\{\phi^{fk}(R_1,R_2,C_1,C_2)\bigr\} \;\cup\; \bigcup_{(C_1,C_2,\theta)\in\mathcal{C}_{exp}} \bigl\{\phi^{fk}_{exp}(R_1,R_2,C_1,C_2,\theta)\bigr\} \;\cup\; \bigcup_{(C_1,C_2)\in\mathcal{C}_{fuz}} \bigl\{\phi^{fk}_{fuz}(R_1,R_2,C_1,C_2)\bigr\}$
