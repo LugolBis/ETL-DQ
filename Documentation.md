@@ -479,6 +479,12 @@ La **Cohérence** mesure la validité des relations entre les données.
 - Distribution groupée des colonnes (_SLM_):
   L'idée est ici d'utiliser un _SLM_ (Small Langage Model) pour générer les embeddings des chaînes de caractères dans l'algorithme ***EncodeProjRel***.
 
+Formalisme :\
+Soit $R$ une relation.\
+On pose $R_{agd} = AnalyzeGroupedDistribution(R)$\
+$R_{detected} = \sigma_{M1 > \frac{1}{2}}(R_{agd})$\
+Tel que $\phi_{coherence}(R) = \frac{|\sigma_{M2 \leq 5 \land M3 \leq 10}(R_{detected})|}{|R_{detected}|}$
+
 > [!WARNING]
 > Problèmes ouverts :
 >
