@@ -217,14 +217,29 @@ L'**Hétérogénéité des échelles** mesure la dissimilarité des unités/éch
 Métriques :
 
 - Différence de dispersion relative - inter-sources :
-  _d\_CV_ = |_ln_(_CV\_Y_ / _CV\_X_)| avec _CV_ = _&sigma;_/|_&mu;_|. Seuil _d\_CV_ doit être <= _ln_(5)
+  + Concept :\
+    On mesure l'hétérogénéité des échelles avec un indicateur statistique calculé sur la distribution des données de deux colonnes :
+      - _X_ = `Source1.Consommation.NB_KW_Jour` et _Y_ = `Source2.Consommation.NB_KW_Jour`
+  + Formalisme :\
+    Soit $X$ un ensemble de valeurs numériques tel que $CV(X) = \frac{\sigma_X}{|\mu_X|}$\
+    Tel que $d_{CV}(X, Y) = ln(\frac{CV(X)}{CV(Y)})$\
+    On attends $d_{CV} <= ln(5)$\
+    \
+    Soit $R_1$, $R_2$ deux relations tel que $|R_1| = N_1$ et $C_1$ l'ensemble des attributs de $R_1$ (resp. $C_2$ pour $R_2$).\
+    Tel que $\phi_{d_{CV}}(R_1, R_2) = \{1[|d_{CV}(\pi_{c_1}(R_1), \pi_{c_2}(R_2)) \leq ln(5)|]\}_{c_1, c_2 \in C'_1 \times C'_2}$
 
-  - _X_ = `Source1.Consommation.NB_KW_Jour` et _Y_ = `Source2.Consommation.NB_KW_Jour`
+  
 - Ratio de position (RP) - intra-source :
-  Soit (_x_, _y_, _z_) un triplet de colonnes de la relation _R_, tel qu'on suppose que &forall; _t_ &in; _R_ _t[x]_ <= _t[y]_ <= _t[z]_ et _t[x]_ < _t[z]_ .
-  On a _RP_ = $\frac{1}{R} \sum_{\forall t \in R}1 [\frac{(t[y] − t[x])}{(t[z] − t[x])} \notin [\epsilon, 1-\epsilon]]$ :
-
-  - _R_ = `Source3.CSP`, (_x_, _y_, _z_) = (`Salaire_Min`, `Salaire_Moyen`, `Salaire_Max`) et $\epsilon = 0.1$
+  + Concept :\
+    On mesure statistiquement si les valeurs de la colonne $y$ sont proches des extremums ($x$, $z$) :
+      - _R_ = `Source3.CSP`, (_x_, _y_, _z_) = (`Salaire_Min`, `Salaire_Moyen`, `Salaire_Max`) et $\epsilon = 0.1$
+  
+  + Formalisme :\
+    Soit $R$ une relation tel que $|R| = N$, $C$ les attributs de $R$ tel que $x, y, z \in C^3$ avec $x \neq y \neq z$.\
+    On suppose que $\forall t \in R, t[x] \leq t[y] \leq t[z]$.\
+    On a $RP(R, x, y, z, \epsilon) = \frac{1}{N} \sum_{\forall t \in R}1 [\frac{(t[y] − t[x])}{(t[z] − t[x])} \notin [\epsilon, 1-\epsilon]]$\
+    On définit $C_x, C_y, C_z \subseteq C$ et $\epsilon \in [0; 1]$.\
+    Tel que $\phi_{RP}(R) = \{1-RP(R, x, y, z, \epsilon)\}_{x,y,z \in C_x \times C_y \times C_z}$
 
 #### Complétude des données
 
