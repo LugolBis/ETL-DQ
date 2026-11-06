@@ -248,21 +248,27 @@ La **Complétude** mesure la quantité de données manquantes d'une base de donn
 Métriques :
 
 - Mesure du pourcentage de valeurs manquantes :
-  - `Source4.IRIS.ID_Iris`
-  - `Source1.Consommation.NB_KW_Jour`
-  - `Source2.Consommation.NB_KW_Jour`
-  - `Source1.Population.CSP`
-  - `Source2.Population.CSP`
-  - `Source3.CSP.Salaire_Moyen`
-  - `Source3.CSP.ID_CSP`
-  - `Source1.Population.Adresse`
-  - `Source2.Population.Adresse`
-  - `Source1.Consommation.Nom_Rue`
-  - `Source2.Consommation.Nom_Rue`
-  - `Source1.Consommation.Code_Postal`
-  - `Source2.Consommation.Code_Postal`
+  + Concept :
+    - `Source4.IRIS.ID_Iris`
+    - `Source1.Consommation.NB_KW_Jour`
+    - `Source2.Consommation.NB_KW_Jour`
+    - `Source1.Population.CSP`
+    - `Source2.Population.CSP`
+    - `Source3.CSP.Salaire_Moyen`
+    - `Source3.CSP.ID_CSP`
+    - `Source1.Population.Adresse`
+    - `Source2.Population.Adresse`
+    - `Source1.Consommation.Nom_Rue`
+    - `Source2.Consommation.Nom_Rue`
+    - `Source1.Consommation.Code_Postal`
+    - `Source2.Consommation.Code_Postal`
 
     Exemple : Par exemple, sur 10 000 lignes de `Source1.Consommation`, si 200 ont `NB_KW_Jour` manquant alors le taux de complétude est de 98%.
+  
+  + Formalisme :\
+    Soit $R$ une relation tel que $|R| = N$ et $C$ l'ensemble de attributs de $R$.\
+    On a $C' \subseteq C$ tel qu'on a :\
+    $\phi_{compl}(R) = \{\frac{1}{N} \sum_{t \in R} 1[t[c] \neq null]\}_{c \in C'}$
 
 #### Unicité
 
