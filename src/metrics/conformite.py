@@ -97,7 +97,7 @@ def interval_validity(
         pl.col("column_name_min"),
         pl.col("column_name_target"),
         pl.col("column_name_max"),
-        (pl.col("count") / n).alias("interval_percent"),
+        (1 - pl.col("count") / n).alias("interval_percent"),
         pl.lit(timestamp).alias("timestamp"),
     )
 

@@ -257,7 +257,7 @@ class TestConformiteLabels:
         # 2 matchs sur 4 lignes
         assert result["labels_percent"].to_list() == [0.5]
 
-    def test_all_nulls_gives_zero(self):
+    def test_all_nulls_gives_one(self):
         df = pl.DataFrame({"a": pl.Series([None, None], dtype=pl.String)})
         result = label_set(df, ["a"], ["x"], "s")
         assert result["labels_percent"].to_list() == [0.0]
@@ -330,12 +330,12 @@ class TestConformiteInterval:
     def test_all_values_respect_constraint(self):
         df = pl.DataFrame({"a": [1, 2, 3], "b": [2, 3, 4], "c": [3, 4, 5]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     def test_no_value_respects_constraint(self):
         df = pl.DataFrame({"a": [3, 4, 5], "b": [2, 3, 4], "c": [1, 2, 3]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [1.0]
+        assert result["interval_percent"].to_list() == [0.0]
 
     def test_partial_violation(self):
         # 3 lignes respectent, 1 viole
@@ -347,48 +347,48 @@ class TestConformiteInterval:
             }
         )
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.25]
+        assert result["interval_percent"].to_list() == [0.75]
 
     # Cas à une seule ligne
 
     def test_single_valid_row(self):
         df = pl.DataFrame({"a": [1], "b": [2], "c": [3]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     def test_single_invalid_row(self):
         df = pl.DataFrame({"a": [3], "b": [2], "c": [1]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [1.0]
+        assert result["interval_percent"].to_list() == [0.0]
 
     # Bornes inclusives (égalités autorisées)
 
     def test_equality_at_all_levels_is_valid(self):
         df = pl.DataFrame({"a": [3], "b": [3], "c": [3]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     def test_c0_equal_c1_is_valid(self):
         df = pl.DataFrame({"a": [2], "b": [2], "c": [3]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     def test_c1_equal_c2_is_valid(self):
         df = pl.DataFrame({"a": [1], "b": [2], "c": [2]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     # Violations légères (juste en dehors)
 
     def test_just_above_b_invalid(self):
         df = pl.DataFrame({"a": [2.0001], "b": [2.0], "c": [3.0]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [1.0]
+        assert result["interval_percent"].to_list() == [0.0]
 
     def test_just_above_c_invalid(self):
         df = pl.DataFrame({"a": [1.0], "b": [2.0001], "c": [2.0]})
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [1.0]
+        assert result["interval_percent"].to_list() == [0.0]
 
     # Valeurs négatives
 
@@ -401,7 +401,7 @@ class TestConformiteInterval:
             }
         )
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     def test_negative_values_all_invalid(self):
         df = pl.DataFrame(
@@ -429,9 +429,9 @@ class TestConformiteInterval:
         # Ligne 2 : c null → résultat null → non compté
         # Ligne 3 : a et c null → résultat null → non compté
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.25]
+        assert result["interval_percent"].to_list() == [0.75]
 
-    def test_all_nulls_gives_zero(self):
+    def test_all_nulls_gives_one(self):
         df = pl.DataFrame(
             {
                 "a": pl.Series([None, None], dtype=pl.Float64),
@@ -440,7 +440,7 @@ class TestConformiteInterval:
             }
         )
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     # Plusieurs triplets
 
@@ -456,7 +456,7 @@ class TestConformiteInterval:
             }
         )
         result = interval_validity(df, [("a", "b", "c"), ("d", "e", "f")], "s")
-        assert result["interval_percent"].to_list() == [0.0, 0.5]
+        assert result["interval_percent"].to_list() == [1.0, 0.5]
 
     def test_triplet_order_is_preserved(self):
         df = pl.DataFrame(
@@ -507,12 +507,12 @@ class TestConformiteInterval:
             }
         )
         result = interval_validity(df, [("a", "b", "c"), ("d", "e", "f")], "s")
-        assert result["interval_percent"].to_list() == [0.0, 1.0]
+        assert result["interval_percent"].to_list() == [1.0, 0.0]
 
     def test_same_column_repeated_is_always_valid(self):
         df = pl.DataFrame({"a": [1, 2, 3]})
         result = interval_validity(df, [("a", "a", "a")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     # Schéma / colonnes de sortie
 
@@ -595,7 +595,7 @@ class TestConformiteInterval:
             }
         )
         result = interval_validity(df, [("a", "b", "c")], "s")
-        assert result["interval_percent"].to_list() == [0.0]
+        assert result["interval_percent"].to_list() == [1.0]
 
     def test_integer_dataframe(self):
         df = pl.DataFrame(
