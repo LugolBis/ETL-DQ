@@ -10,6 +10,8 @@ from metrics.heterogeneite import (
     calculer_cv,
     calculer_difference_dispersion,
     calculer_ratio_position,
+    score_dispersion,
+    score_ratio_position,
 )
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.models import DfReader, DfWriter
@@ -77,6 +79,7 @@ def heterogeneite_dispersion_assessment(
                 "column_name_1": colonne1,
                 "column_name_2": colonne2,
                 "difference_dispersion": difference,
+                "dispersion_score": score_dispersion(difference),
                 "timestamp": timestamp,
             }
         )
@@ -122,6 +125,7 @@ def heterogeneite_ratio_assessment(
                     "column_name_mean": colonne_moyen,
                     "column_name_max": colonne_max,
                     "ratio_position": ratio,
+                    "ratio_score": score_ratio_position(ratio),
                     "timestamp": timestamp,
                 }
             )

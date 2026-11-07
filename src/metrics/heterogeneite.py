@@ -34,6 +34,19 @@ def calculer_difference_dispersion(
     return abs(math.log(cv_evry / cv_paris))
 
 
+def score_dispersion(
+    difference: float,
+    seuil: float = math.log(5),
+) -> float:
+    """1 si les echelles sont compatibles (difference <= seuil), 0 sinon."""
+    return 1.0 if difference <= seuil else 0.0
+
+
+def score_ratio_position(ratio: float) -> float:
+    """Proportion de ratios normaux."""
+    return 1.0 - ratio
+
+
 def calculer_ratio_position(
     df: pl.DataFrame,
     colonne_min: str = "Salaire_Min",
