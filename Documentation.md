@@ -61,6 +61,14 @@ $R_{3,3} = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, \verb|NB_KW_Jour|}\big(R
 $R_{3,4} = \gamma_{\verb|CSP| \to \verb|ID_CSP|, \verb|Salaire_Moyen|, \verb|NB_KW_Jour|}\big(R_{3,2} \Join_{R_{3,2}.CSP = \verb|CSP3.ID_CSP| } Source3.CSP\big)$
 $\verb|Consommation_CSP| = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, AVG(\verb|NB_KW_Jour| \times 365) \to \verb|Conso_moyenne_annuelle|}(R_{3,3} \cup R_{3,4})$
 
+> [!NOTE]
+> **Changelog**
+>
+> - **Consommation_IRIS_Paris** : ajout de la conversion des codes postaux parisiens en nom de ville pour la jointure avec les IRIS.
+> - **Consommation_IRIS_Evry** : remplacement de la correspondance exacte des rues par une correspondance approximative.
+> - **Consommation_CSP** : extraction des composants des adresses et adaptation des jointures CSP selon les sources.
+> - **Requêtes SQL** : mise à jour de la documentation pour refléter les transformations définies dans les mappings et les DAGs.
+
 ### Requêtes
 
 - **Consommation_IRIS_Paris** (Source1 &#10781; Source4) :
@@ -73,7 +81,7 @@ SELECT
 FROM Source1.Consommation c
 JOIN Source4.IRIS i
     ON c.Nom_Rue    = i.ID_Rue
-   AND c.Code_Postal = i.ID_Ville
+   AND (CASE WHEN TRY_CAST(c.Code_Postal AS INTEGER) BETWEEN 75000 AND 75999 THEN 'Paris' ELSE CAST(c.Code_Postal AS VARCHAR) END) = i.ID_Ville
 GROUP BY i.ID_Iris;
 ```
 
@@ -86,34 +94,29 @@ SELECT
     AVG(c.NB_KW_Jour * 365) AS Conso_moyenne_annuelle
 FROM Source2.Consommation c
 JOIN Source4.IRIS i
-    ON c.Nom_Rue    = i.ID_Rue
-   AND c.Code_Postal = i.ID_Ville
+    ON CONTAINS(LOWER(c.Nom_Rue), LOWER(TRIM(i.ID_Rue)))
 GROUP BY i.ID_Iris;
 ```
 
 - **Consommation_CSP** (Source1 &#10781; Source2 &#10781; Source3) :
 
 ```SQL
-INSERT INTO Consommation_CSP (ID_CSP, Conso_moyenne_annuelle, Salaire_Moyen)
+-- Transformations préalables réalisées dans le DAG consommation_csp.py :
+-- 1. Paris : extraction de N et Nom_Rue depuis Adresse,
+--    puis jointure interne avec Source1.Consommation.
+-- 2. Évry : extraction de N, Nom_Rue et Code_Postal depuis Adresse,
+--    puis jointure interne avec Source2.Consommation.
+-- 3. Paris : correspondance approximative de CSP avec Source3.CSP.Desc.
+-- 4. Évry : correspondance exacte de CSP avec Source3.CSP.ID_CSP.
+-- 5. UNION ALL des deux résultats.
+-- Le DataFrame obtenu est désigné par "self" dans Polars SQL.
+
 SELECT
-    csp.ID_CSP,
-    AVG(conso.NB_KW_Jour * 365) AS Conso_moyenne_annuelle,
-    csp.Salaire_Moyen
-FROM Source3.CSP csp
-LEFT JOIN (
-    -- Consommations individuelles, Paris (Source 1)
-    SELECT p.CSP, c.NB_KW_Jour
-    FROM Source1.Population p
-    JOIN Source1.Consommation c ON p.Adresse = c.ID_Adr
-
-    UNION ALL
-
-    -- Consommations individuelles, Evry (Source 2)
-    SELECT p.CSP, c.NB_KW_Jour
-    FROM Source2.Population p
-    JOIN Source2.Consommation c ON p.Adresse = c.ID_Adr
-) AS conso ON conso.CSP = csp.ID_CSP
-GROUP BY csp.ID_CSP, csp.Salaire_Moyen;
+    ID_CSP,
+    Salaire_Moyen,
+    AVG(NB_KW_Jour * 365) AS Conso_moyenne_annuelle
+FROM self
+GROUP BY ID_CSP, Salaire_Moyen;
 ```
 
 ## Qualité de données
