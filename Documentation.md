@@ -554,3 +554,28 @@ Le dashboard est exporté dans `superset/dashboards/qualite_des_donnees.zip` et 
 
 - Doublons intra sources :
   - Utiliser la découverte de dépendances fonctionnelles approximatives (_DFA_) en utilisant l'algorithme _TANE_.
+
+### Orchestration des processus :
+
+L'amélioration de la qualité de certaines facettes peut contribuer par effet de bord à l'amélioration de la qualité de d'autres facettes.
+
+C'est pourquoi nous proposons d'orchestrer comme suit l'amélioration de la qualité des données :
+```mermaid
+flowchart LR
+  A["Conformité<br>----<br>Hétérogénéité"]
+  B["Unicité"]
+  C["Cohérence"]
+  D["Complétude"]
+
+  A --> B
+  B --> C
+  C --> D
+```
+
+|Facette(s)|Effet de bord de son amélioration|
+|:-|:-|
+|Conformité et Hétérogénéité|La validité des valeurs et de leur échelle impacte les statistiques.|
+|Unicité|Les doublons biaisent les statistiques de groupe.|
+|Cohérence|Détection des règles métier candidates en vue du choix de méthodes d'imputation de données par les équipes métier.|
+|Complétude|On peut supposer que les valeurs invalides qui n'ont pas pu être imputée peuvent être mise à `NULL`.|
+
