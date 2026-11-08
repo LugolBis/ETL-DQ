@@ -67,7 +67,6 @@ $\verb|Consommation_CSP| = \gamma_{\verb|ID_CSP|, \verb|Salaire_Moyen|, AVG(\ver
 > - **Consommation_IRIS_Paris** : ajout de la conversion des codes postaux parisiens en nom de ville pour la jointure avec les IRIS.
 > - **Consommation_IRIS_Evry** : remplacement de la correspondance exacte des rues par une correspondance approximative.
 > - **Consommation_CSP** : extraction des composants des adresses et adaptation des jointures CSP selon les sources.
-> - **Requêtes SQL** : mise à jour de la documentation pour refléter les transformations définies dans les mappings et les DAGs.
 
 ### Requêtes
 
@@ -101,21 +100,58 @@ GROUP BY i.ID_Iris;
 - **Consommation_CSP** (Source1 &#10781; Source2 &#10781; Source3) :
 
 ```SQL
--- Transformations préalables réalisées dans le DAG consommation_csp.py :
--- 1. Paris : extraction de N et Nom_Rue depuis Adresse,
---    puis jointure interne avec Source1.Consommation.
--- 2. Évry : extraction de N, Nom_Rue et Code_Postal depuis Adresse,
---    puis jointure interne avec Source2.Consommation.
--- 3. Paris : correspondance approximative de CSP avec Source3.CSP.Desc.
--- 4. Évry : correspondance exacte de CSP avec Source3.CSP.ID_CSP.
--- 5. UNION ALL des deux résultats.
--- Le DataFrame obtenu est désigné par "self" dans Polars SQL.
+-- Pseudo-SQL : extract_adr() extrait et normalise les éléments
+-- de l'adresse (numéro, nom de rue, code postal).
+
+INSERT INTO Consommation_CSP (ID_CSP, Conso_moyenne_annuelle, Salaire_Moyen)
+WITH
+-- Paris : jointure Population / Consommation sur N et Nom_Rue
+Paris AS (
+    SELECT p.CSP, c.NB_KW_Jour
+    FROM Source1.Population p
+    JOIN Source1.Consommation c
+        ON extract_adr(p.Adresse, 'N') = c.N
+       AND extract_adr(p.Adresse, 'Nom_Rue') = c.Nom_Rue
+),
+
+-- Evry : jointure sur N, Nom_Rue et Code_Postal
+Evry AS (
+    SELECT p.CSP, c.NB_KW_Jour
+    FROM Source2.Population p
+    JOIN Source2.Consommation c
+        ON extract_adr(p.Adresse, 'N') = c.N
+       AND extract_adr(p.Adresse, 'Nom_Rue') = c.Nom_Rue
+       AND extract_adr(p.Adresse, 'Code_Postal') = c.Code_Postal
+),
+
+-- Paris : correspondance approximative avec la description CSP
+CSP_Paris AS (
+    SELECT csp.ID_CSP, csp.Salaire_Moyen, p.NB_KW_Jour
+    FROM Paris p
+    JOIN Source3.CSP csp
+        ON CONTAINS(LOWER(csp.Desc), LOWER(TRIM(p.CSP)))
+),
+
+-- Evry : correspondance exacte avec l'identifiant CSP
+CSP_Evry AS (
+    SELECT csp.ID_CSP, csp.Salaire_Moyen, e.NB_KW_Jour
+    FROM Evry e
+    JOIN Source3.CSP csp
+        ON e.CSP = csp.ID_CSP
+),
+
+-- Regroupement des deux sources
+Sources_Reunies AS (
+    SELECT ID_CSP, Salaire_Moyen, NB_KW_Jour FROM CSP_Paris
+    UNION ALL
+    SELECT ID_CSP, Salaire_Moyen, NB_KW_Jour FROM CSP_Evry
+)
 
 SELECT
     ID_CSP,
-    Salaire_Moyen,
-    AVG(NB_KW_Jour * 365) AS Conso_moyenne_annuelle
-FROM self
+    AVG(NB_KW_Jour * 365) AS Conso_moyenne_annuelle,
+    Salaire_Moyen
+FROM Sources_Reunies
 GROUP BY ID_CSP, Salaire_Moyen;
 ```
 
