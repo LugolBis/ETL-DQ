@@ -642,9 +642,9 @@ x & \text{sinon }
 \end{cases}
 $$
     
-    $\mathcal{K}_{\mathrm{disp}}(R_1, R_2, c_1, c_2, \mathcal{FC}, s_{fc}) = \{t[c_1] \mapsto \mathcal{T}(t[c_1], \mathcal{FC}, s_{fc}), t[C_1 \setminus c_1] \mid t\in R_1\}$
-
-    La confiance vaut donc $R^2$.
+$$
+\mathcal{K}_{\mathrm{disp}}(R_1, R_2, c_1, c_2, \mathcal{FC}, s_{fc}) = \{t[c_1] \mapsto \mathcal{T}(t[c_1], \mathcal{FC}, s_{fc}), t[C_1 \setminus c_1] \mid t\in R_1\}
+$$
 
 - RP intra-source :
   + Concept :\
@@ -666,16 +666,18 @@ z \cdot x & \text{si } op = \times \\
 x/z & \text{si } op = \div \\
 \end{cases}
 $$
-    
-    On note $R_{ho} = \{t \in R_{het} \mid \mathcal{T}_c(t)\text{ satisfait }\mathcal{O}\text{ sur }C'\}$ les lignes corrigées par $c$.
 
-    On retient $c^* = (z^*, op^*)$ tel que $|R_{rho^*}| \ge s_h \cdot |R_{het}| $ et $|R_{rho^*}|$ maximal (à égalité, choix déterministe arbitraire).
+$$
+\text{On note } R_{ho} = \lbrace t \in R_{het} \mid \mathcal{T}_c(t) \text{ satisfait } \mathcal{O} \text{ sur } C' \rbrace \text{ les lignes corrigées par } c
+$$
 
-    La fonction d’amélioration est donc :
-    
-    $\mathcal{K}_{\mathrm{RP}}(R, C', \mathcal{O}, Z, s_h) = \{\mathcal{T}_{c^*}(t) \text{ si } t \in R_{rho^*},\ t\text{ sinon} \mid t \in R\}$
-    
-    De confiance $cov = |R_{rho^*}|/|R_{het}|$ si $|R_{het} \gt 0$, sinon $cov =1$ et $R'=R$.
+$$
+\text{On retient } c^{\ast} = (z^{\ast}, \mathrm{op}^{\ast}) \text{ tel que } \lvert R_{\rho^{\ast}} \rvert \geq s_h \cdot \lvert R_{het} \rvert \text{ et } \lvert R_{\rho^{\ast}} \rvert \text{ maximal (à égalité, choix déterministe arbitraire).}
+$$
+
+$$
+\mathcal{K}_{\mathrm{RP}}(R, C', \mathcal{O}, Z, s_h) = \lbrace \mathcal{T}_{c^{\ast}}(t) \text{ si } t \in R_{\rho^{\ast}},\ t \text{ sinon} \mid t \in R \rbrace
+$$
 
 #### Complétude des données
 
