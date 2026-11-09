@@ -681,17 +681,134 @@ $$
 
 #### Complétude des données
 
-- Mesure du pourcentage de valeurs manquantes :
-  1. Imputation statistique : _MICE_ sur les données quantitatives.
-  1. Utiliser un modèle _GAN_ sur les données catégorielles.
++ Concept :
+
+  On impute les colonnes présentant une incomplétude manifeste selon leur type de données :
+  - **Quantitatives** : imputation statistique par **MICE** (chaque colonne incomplète est modélisée à partir des autres, de façon itérative).
+  - **Catégorielles** : imputation par un modèle génératif **GAN** (Réseaux Génératif Antagoniste), qui apprend la distribution jointe et génère les modalités manquantes.
+
++ Formalisme :
+
+  ```python
+  def ImproveCompletude(R: Relation) -> Relation:
+      quanti = [column for column in R if is_numeric(R[column])]
+      categ = [column for column in R if column not in quanti]
+
+      # Quantitative : MICE
+      R[quanti] = IterativeImputer(max_iter=10).fit_transform(R[quanti])
+
+      # Categorial : GAN
+
+      # mask : 1 = observed, 0 = missing
+      X, mask = (
+          one_hot(R[categ]),
+          R[categ].notna(),
+      )
+
+      G, D = init_generateur(), init_discriminateur()
+
+      for _ in range(n_iter):
+          batch = sample(X, mask)
+
+          # G complete the missing cells
+          X_gen = G(batch.X, batch.mask, bruit())
+          X_hat = batch.mask * batch.X + (1 - batch.mask) * X_gen
+
+          # D guess which cell was imputed
+          D.maj(X_hat, batch.mask, indice=hint(batch.mask))
+
+          # G try to fool D to increase generated values fidelity compared to observed ones
+          G.maj(D, X_hat, batch.mask)
+
+      R[categ] = decode(argmax_par_variable(G(X, mask, bruit())), R[categ])
+  ```
 
 #### Unicité
 
-- Doublons extra sources :
-  - L'union (∪) n'élimine que les doublons exacts (tuples identiques sur tous les attributs). Les doublons partiels entre sources (même clé métier, attributs différents, par exemple même (Nom, Prénom) avec une adresse différente) subsistent après l'union. On leur applique la même solution que pour les doublons intra sources (DFA avec TANE) sur la relation obtenue après l'union, ou après toute autre opération de composition.
+- Doublons extra-sources :
+  + Concept :
 
-- Doublons intra sources :
-  - Utiliser la découverte de dépendances fonctionnelles approximatives (_DFA_) en utilisant l'algorithme _TANE_.
+    L'union ($\cup$) n'élimine que les **doublons exacts** (tuples identiques sur tous les attributs). Les **doublons partiels** entre sources (même clé métier mais attributs différents, par exemple même `(Nom, Prénom)` avec une adresse différente) subsistent après l'union.
+
+    On leur applique **la même solution que pour les doublons intra-source** (DFA avec TANE), sur la relation obtenue après l'union ou après toute autre opération de composition.
+
+  + Formalisme :
+
+    Voir ci-après.
+
+    ```python
+    R = union(source_A, source_B).drop_duplicates()
+
+    # To clear the remaining duplicates we use the same algorithm as intra-source
+    doublons = DetectDuplicatesDFA(R, epsilon)
+    ```
+
+- Doublons intra-source :
+  + Concept :
+
+    On découvre les **dépendances fonctionnelles approximatives** (DFA) `X → A` avec l'algorithme **TANE** : une DFA est une dépendance qui tient sur la quasi-totalité des tuples, avec une erreur $g3 \le \epsilon$. Les tuples qui **violent** une DFA (même `X`, valeurs de `A` différentes) sont des **candidats doublons** à fusionner ou à arbitrer.
+
+    TANE parcourt le treillis des ensembles d'attributs niveau par niveau, s'appuie sur les **partitions** (classes de tuples égaux sur `X`) et élague les candidats redondants.
+
+  + Formalisme
+
+    ```python
+    def g3(R: Relation, X, A) -> float:
+        """
+        Minimum proportion of tuples to remove in order for X → A to hold exactly.
+        """
+
+        classes = R.groupby(list(X))[A]
+        return 1 - classes.agg(lambda s: s.value_counts().iloc[0]).sum() / len(R)
+
+
+    def tane(R: Relation, epsilon: float, max_lhs=3):
+        attrs = set(R.columns)
+        # C+(X) : RHS candidates still useful
+        C = {frozenset(): attrs}
+        level = [frozenset([a]) for a in attrs]
+        dfa = []
+
+        while level and len(level[0]) <= max_lhs + 1:
+            for X in level:
+                C[X] = set.intersection(*(C[X - {A}] for A in X))
+
+                for A in X & C[X]:
+                    err = g3(R, X - {A}, A)
+
+                    # X\{A} → A is a valid DFA
+                    if err <= epsilon:
+                        dfa.append((X - {A}, A, err))
+
+                        # pruning : minimal dependency
+                        C[X].discard(A)
+
+                        if err == 0:
+                            # additional pruning for exact FDs
+                            C[X] -= attrs - X
+
+            # pruning the 'treillis'
+            level = [X for X in level if C[X]]
+            # merge the sets who share a prefix
+            level = next_level(level)
+        return dfa
+
+
+    def DetectDuplicatesDFA(R, epsilon):
+        candidates = []
+
+        for X, A, err in tane(R, epsilon):
+            # DFA not accurate : there is violations
+            if err > 0:
+                for _, groupe in R.groupby(list(X)):
+                    # same X and different A
+                    if groupe[A].nunique() > 1:  # même X, A différent
+                        # group of possible duplicates
+                        candidates.append(groupe)
+
+        # merger/arbitrage (survival rule)
+        return dedupliquer(candidates)
+    ```
 
 ### Orchestration des processus :
 
