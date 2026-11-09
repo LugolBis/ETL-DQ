@@ -810,6 +810,11 @@ $$
         return dedupliquer(candidates)
     ```
 
+#### Cohérence
++ Concept :
+  
+  La facette de cohérence est fortement couplée aux règles métier, que l'on ne peut pas inférer. La solution d'amélioration de la qualité des données consisterait donc à filtrer les colonnes considérées comme incohérentes, dans la mesure, bien sûr, où celles-ci ne sont pas utilisées dans des jointures. Dans le cas contraire, l'invalidation d'une source pourrait être envisagée.
+
 ### Orchestration des processus :
 
 L'amélioration de la qualité de certaines facettes peut contribuer par effet de bord à l'amélioration de la qualité de d'autres facettes.
