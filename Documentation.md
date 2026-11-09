@@ -558,16 +558,75 @@ Le dashboard est exporté dans `superset/dashboards/qualite_des_donnees.zip` et 
 #### Conformité
 
 - Format des chaînes de caractères :
-  - Fournir la REGEX cible et la donnée erronnée à un SLM pour q'il essaie de corriger -> loger et monitorer chaque changements pour une validation humaine / un plus gros modèle d'IA.
+  + Concept :\
+    Fournir une suite d'opérations $\theta$ à appliquer sur un ensemble de colonne $C'$ d'une relation $R$, pour que leurs valeurs se conforment au pattern $p$.
+
+  + Formalisme :\
+    Soit $R$ une relation tel que $C$ est l'ensemble des attributs de $R$, tel que $C' \subseteq C$.\
+    Soit $p$ un pattern associé à $K, C'$ tel que on a :\
+    $\forall t \in \sigma_{key(t) \in K}(R), \forall c \in C' : \neg match(t[c], p)$.\
+    Avec $K \subseteq \pi_{keys(R)}(R)$, $K \neq \empty$ et $C' \neq \empty$.\
+    On note $\theta_p$ la suite d'opérations à appliquer sur $R$ pour se conformer au pattern $p$.\
+    Tel que on a la fonction d'amélioration :\
+    $\mathcal{K}_{fmt}(R, K, C', \theta_p) = \theta_p(\sigma_{key(.) \in K}(R), C') \cup \sigma_{key(.) \notin K}(R)$
 
 - Ensemble fini de données (labels) :
-  - Fournir l'ensembles de labels acceptés _X_ à un SLM de classification pour qu'il calcule l'étiquette (label) la plus probable pour la donnée. On pourrait utiliser _JEV_ pour le SLM.
+  + Concept :\
+    Fine-tuner un SLM de classification à partir de l'ensemble des labels acceptés $X$ et des données valides. L'utilisation d'un modèle dont la génération est contrainte à un espace $\R^{|X|}$ (comme _JEV_), permet de calculer une probabilité d'appartenance de $x$ à chaque classe $y \in X$, donc $\hat{y} \in [0;1]^{|X|}$.\
+    On contraint ainsi la phase d'inférence pour assurer la conformité de la réponse.
 
 - Validité d'intervalles de données :
-  - Si une valeur sort de son intervalle, on regarde d'abord si ce sont les bornes qui sont à l'envers (par exemple _Salaire\_Min_ > _Salaire\_Max_) : dans ce cas on les échange, car il s'agit sans doute d'une inversion de colonnes. Sinon, quand l'écart est petit, on ramène simplement la valeur à la borne la plus proche. Quand l'écart est trop grand (au-delà d'un seuil _seuil\_ecart_), on ne force pas une valeur arbitraire : on la met à `Null` et on l'impute avec _MICE_, comme pour la complétude. Chaque modification est loguée pour qu'un humain puisse la valider.
+  + Concept :\
+    On effectue au plus une permutation des valeurs des attributs concernés (par exemple _Salaire\_Min_ > _Salaire\_Max_) ou on arrondit celles-ci.
+
+  + Formalisme:\
+    Soit $R$ une relation tel que $C$ est l'ensemble de ses attributs.\
+    Soit $C'$ l'ensemble ordonné des attributs devant respecter l'ensemble ordonné d'opérateurs $\mathcal{O}$.\
+    Tel que $C' \subseteq C$ et $\mathcal{O} = \{\leq, \lt, \geq, \gt\}$.\
+    On a $K$ l'ensemble des clés des tuples ne respectant pas $\mathcal{O}$.\
+    La fonction de permutation est $Perm(t,C',\mathcal{O})$ : elle renvoie $t$ après au plus une permutation des valeurs des attributs de $C'$ de sorte que les opérateurs de $\mathcal{O}$ soient respectés, sinon $t$ inchangé.\
+    Soit $s_a$ le seuil d'écart accepté pour arrondir afin de valider un opérateur de $\mathcal{O}$, tel que $s_a \in [0;1]$.\
+    La fonction d'arrondit $Round(t, C', \mathcal{O}, s_a)$ : elle renvoie $t$ après avoir arrondit (selon $s_a$) les attributs $C'$ de sorte que les opérateurs de $\mathcal{O}$ soient respectés, sinon $t$ inchangé.
+    
+    On a donc la fonction d'amélioration :
+    $$
+    \begin{aligned}
+    \mathcal{T}(t, C', \mathcal{O}, s_a)
+    &=
+    \begin{cases}
+    Perm(t, C', \mathcal{O})
+    & \text{si } Perm(t, C', \mathcal{O}) \neq t
+    \\
+    Round(t, C', \mathcal{O}, s_a)
+    & \text{si } Round(t, C', \mathcal{O}, s_a) \neq t
+    \\
+    t[C' \leftarrow \text{NULL}]
+    & \text{sinon}
+    \end{cases}
+    \\[10pt]
+    \mathcal{K}_{interval}(R, K, C', \mathcal{O}, s_a)
+    &=
+    \sigma_{key(.) \notin K}(R)
+    \cup
+    \left\{
+    \mathcal{T}(t, C', \mathcal{O}, s_a)
+    \mid
+    t \in \sigma_{key(.) \in K}(R)
+    \right\}
+    \end{aligned}
+    $$
 
 - Validité des formats extra sources :
-  - Utiliser une jointure plus flexible -> pas une égalité stricte, mais un calcul de similarité. Définir _seuil\_sim_ tel que pour toute clés candidate _k_ tel que _sim(k)_ >= _seuil\_sim_ on considère que la contrainte de clé étrangère est valide.
+  + Concept :\
+    Pour chaque tuple de $R_1$ projeté sur $C'_1$ et chaque tuple de $R_2$ projeté sur $C'_2$, on calcule une similarité ; la jointure est validée si cette similarité atteint un seuil donné.
+
+  + Formalisme :\
+    Soient $R_1$ et $R_2$ deux relations, $C'_1\subseteq C_1$ et $C'_2\subseteq C_2$ deux ensembles d’attributs non vides, $Sim$ un opérateur de similarité à valeurs dans $[0;1]$, et $s_s \in [0;1]$ le seuil de similarité à partir duquel les données sont considérées comme joignables.
+
+    La fonction d’amélioration est donc :\
+    $\mathcal{K}_{\mathrm{fk}}(R_1,R_2,C'_1,C'_2, Sim,s_s)=\{(t_1,t_2)\in R_1\times R_2\mid  Sim(\pi_{C'_1}(t_1),\pi_{C'_2}(t_2))\ge s_s\}$
+
+    Ainsi, un couple $(t_1,t_2)$ est conservé si la similarité entre les projections $\pi_{C'_1}(t_1)$ et $\pi_{C'_2}(t_2)$ est supérieure ou égale au seuil $s_s$.
 
 #### Hétérogénéité des échelles
 
