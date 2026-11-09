@@ -672,11 +672,11 @@ $$
 $$
 
 $$
-\text{On retient } c^{\ast} = (z^{\ast}, \mathrm{op}^{\ast}) \text{ tel que } \lvert R_{\rho^{\ast}} \rvert \geq s_h \cdot \lvert R_{het} \rvert \text{ et } \lvert R_{\rho^{\ast}} \rvert \text{ maximal (à égalité, choix déterministe arbitraire).}
+\text{On retient } c^{\ast} = (z^{\ast}, \mathrm{op}^{\ast}) \text{ tel que } \lvert R_{ho^{\ast}} \rvert \geq s_h \cdot \lvert R_{het} \rvert \text{ et } \lvert R_{ho^{\ast}} \rvert \text{ maximal (à égalité, choix déterministe arbitraire).}
 $$
 
 $$
-\mathcal{K}_{\mathrm{RP}}(R, C', \mathcal{O}, Z, s_h) = \lbrace \mathcal{T}_{c^{\ast}}(t) \text{ si } t \in R_{\rho^{\ast}},\ t \text{ sinon} \mid t \in R \rbrace
+\mathcal{K}_{\mathrm{RP}}(R, C', \mathcal{O}, Z, s_h) = \lbrace \mathcal{T}_{c^{\ast}}(t) \text{ si } t \in R_{ho^{\ast}},\ t \text{ sinon} \mid t \in R \rbrace
 $$
 
 #### Complétude des données
