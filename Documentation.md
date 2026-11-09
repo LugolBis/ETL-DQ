@@ -597,7 +597,7 @@ $$
 \mathcal{T}(t, C', \mathcal{O}, s_a) =
 \begin{cases}
 Perm(t, C', \mathcal{O}) & \text{si } Perm(t, C', \mathcal{O}) \neq t \\
-Round(t, C', \mathcal{O}, s_a) & \text{si } Round(t, C', \mathcal{O}, s_a) \neq t \\
+Round(t, C', \mathcal{O}, s_a) & \text{sinon si } Round(t, C', \mathcal{O}, s_a) \neq t \\
 t[C' \leftarrow \text{NULL}] & \text{sinon}
 \end{cases}
 $$
