@@ -564,10 +564,12 @@ Le dashboard est exporté dans `superset/dashboards/qualite_des_donnees.zip` et 
   + Formalisme :\
     Soit $R$ une relation tel que $C$ est l'ensemble des attributs de $R$, tel que $C' \subseteq C$.\
     Soit $p$ un pattern associé à $K, C'$ tel que on a :\
-    $\forall t \in \sigma_{key(t) \in K}(R), \forall c \in C' : \neg match(t[c], p)$.\
+    $\forall t \in \sigma_{key(t) \in K}(R), \forall c \in C' : \neg match(t[c], p)$.
+
     Avec $K \subseteq \pi_{keys(R)}(R)$, $K \neq \empty$ et $C' \neq \empty$.\
     On note $\theta_p$ la suite d'opérations à appliquer sur $R$ pour se conformer au pattern $p$.\
-    Tel que on a la fonction d'amélioration :\
+    Tel que on a la fonction d'amélioration :
+
     $\mathcal{K}_{fmt}(R, K, C', \theta_p) = \theta_p(\sigma_{key(.) \in K}(R), C') \cup \sigma_{key(.) \notin K}(R)$
 
 - Ensemble fini de données (labels) :
@@ -582,13 +584,15 @@ Le dashboard est exporté dans `superset/dashboards/qualite_des_donnees.zip` et 
   + Formalisme:\
     Soit $R$ une relation tel que $C$ est l'ensemble de ses attributs.\
     Soit $C'$ l'ensemble ordonné des attributs devant respecter l'ensemble ordonné d'opérateurs $\mathcal{O}$.\
-    Tel que $C' \subseteq C$ et $\mathcal{O} = \{\leq, \lt, \geq, \gt\}$.\
+    Tel que $C' \subseteq C$ et $\mathcal{O} = \{\leq, \lt, \geq, \gt\}$
+
     On a $K$ l'ensemble des clés des tuples ne respectant pas $\mathcal{O}$.\
     La fonction de permutation est $Perm(t,C',\mathcal{O})$ : elle renvoie $t$ après au plus une permutation des valeurs des attributs de $C'$ de sorte que les opérateurs de $\mathcal{O}$ soient respectés, sinon $t$ inchangé.\
     Soit $s_a$ le seuil d'écart accepté pour arrondir afin de valider un opérateur de $\mathcal{O}$, tel que $s_a \in [0;1]$.\
     La fonction d'arrondit $Round(t, C', \mathcal{O}, s_a)$ : elle renvoie $t$ après avoir arrondit (selon $s_a$) les attributs $C'$ de sorte que les opérateurs de $\mathcal{O}$ soient respectés, sinon $t$ inchangé.
     
     On a donc la fonction d'amélioration :
+
     $$
     \begin{aligned}
     \mathcal{T}(t, C', \mathcal{O}, s_a)
@@ -623,7 +627,8 @@ Le dashboard est exporté dans `superset/dashboards/qualite_des_donnees.zip` et 
   + Formalisme :\
     Soient $R_1$ et $R_2$ deux relations, $C'_1\subseteq C_1$ et $C'_2\subseteq C_2$ deux ensembles d’attributs non vides, $Sim$ un opérateur de similarité à valeurs dans $[0;1]$, et $s_s \in [0;1]$ le seuil de similarité à partir duquel les données sont considérées comme joignables.
 
-    La fonction d’amélioration est donc :\
+    La fonction d’amélioration est donc :
+    
     $\mathcal{K}_{\mathrm{fk}}(R_1,R_2,C'_1,C'_2, Sim,s_s)=\{(t_1,t_2)\in R_1\times R_2\mid  Sim(\pi_{C'_1}(t_1),\pi_{C'_2}(t_2))\ge s_s\}$
 
     Ainsi, un couple $(t_1,t_2)$ est conservé si la similarité entre les projections $\pi_{C'_1}(t_1)$ et $\pi_{C'_2}(t_2)$ est supérieure ou égale au seuil $s_s$.
