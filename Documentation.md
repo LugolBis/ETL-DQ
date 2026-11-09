@@ -621,11 +621,61 @@ $$
 
 #### Hétérogénéité des échelles
 
-- Différence de dispersion relative - inter-sources :
-  - Utiliser une régression linéaire pour réconcilier les échelles.
+- Différence de Dispersion inter-sources :
+  + Concept :\
+    On s'intéresse a deux relations, présentant deux attributs numérique dont l'échelle est hétérogène. Pour résoudre réconcillier les échelles on propose de faire une regression linéaire sur les statistique de ces deux ensembles $X$ et $Y$, plus précisément sur les quantiles $Q_1(p), Q_2(p) \forall p \in [1;99]$ (Theil-Sen). 
+    
+  + Formalisme :\
+    Soient $R_1$ et $R_2$ deux relations présentant une différence d'échelle pour la colonne respective $c_1$ et $c_2$ tel que $c_1, c_2 \in C_1 \times C_2$. Avec $C_1$ l'ensemble des attributs de $R_1$ (resp. $C_2$).\
+    On note $Q_1(p)$ et $Q_2(p)$ les quantiles de $c_1, c_2 \forall p \in [1;99]$.
 
-- Ratio de position (RP) - intra-source :
-  - Tester des multiplications / divisions avec des _x_ $\in$ _X_ pour essayer d'identifier un (_x_, _operation_) tel que _RP_ $\in$ $[\epsilon, 1-\epsilon]$.
+    On a $\mathcal{FC}$ l'ensemble des facteurs connus, $s_{fc} \in [0;1]$ le seuil de proximité à un facteur connu et $(a,b)$ l'estimateur _Theil-Sen_ de $Q_2(p) = a \cdot Q_1(p) + b$ de coefficient de $R^2$.
+
+    La fonction d'amélioration est donc :
+
+$$
+\mathcal{T}(x, \mathcal{FC}, s_{fc}) =
+\begin{cases}
+k \cdot x & \text{si } \exists k \in \mathcal{FC},\ \dfrac{|a-k|}{k} \leq s_{fc} \\
+a \cdot x + b & \text{sinon si } R^2 \geq 0.95 \\
+x & \text{sinon }
+\end{cases}
+$$
+    
+    $\mathcal{K}_{\mathrm{disp}}(R_1, R_2, c_1, c_2, \mathcal{FC}, s_{fc}) = \{t[c_1] \mapsto \mathcal{T}(t[c_1], \mathcal{FC}, s_{fc}), t[C_1 \setminus c_1] \mid t\in R_1\}$
+
+    La confiance vaut donc $R^2$.
+
+- RP intra-source :
+  + Concept :\
+    Pour chaque facteur $z \in \{10^k,7,12,30,52,365\}$, tester $z$ avec un opérateur $op \in \{\times, \div\}$ et calculer la proportion de tuples devenus homogène. On retient $(z, op)$ s'il en améliore au moins 50%, avec un vote au niveau du lot et pas par tuple, puis on l'applique à ceux-ci.
+
+  + Formalisme :\
+    Soit $R$ une relation, $C'$ un ensemble ordonné d'attributs de $R$, soumis à l'ensemble ordonné d'opérateurs $\mathcal{O}$.
+    
+    On a $Z = \{10^k \mid k \in \mathbb{Z}\} \cup \{7, 12, 30, 52, 365\}$, $s_h$ le seuil de réparation.
+    
+    On pose $R_{het} = \{t\in R\mid t\text{ ne satisfait pas }\mathcal{O}\text{ sur }C'\}$.
+
+    Pour un candidat $c = (z, op)$ avec $z \in Z$ et $op \in \{\times,\div\}$, on note :
+    
+$$
+\mathcal{T}_c(x, z, op) =
+\begin{cases}
+z \cdot x & \text{si } op = \times \\
+x/z & \text{si } op = \div \\
+\end{cases}
+$$
+    
+    On note $R_{ho} = \{t \in R_{het} \mid \mathcal{T}_c(t)\text{ satisfait }\mathcal{O}\text{ sur }C'\}$ les lignes corrigées par $c$.
+
+    On retient $c^* = (z^*, op^*)$ tel que $|R_{rho^*}| \ge s_h \cdot |R_{het}| $ et $|R_{rho^*}|$ maximal (à égalité, choix déterministe arbitraire).
+
+    La fonction d’amélioration est donc :
+    
+    $\mathcal{K}_{\mathrm{RP}}(R, C', \mathcal{O}, Z, s_h) = \{\mathcal{T}_{c^*}(t) \text{ si } t \in R_{rho^*},\ t\text{ sinon} \mid t \in R\}$
+    
+    De confiance $cov = |R_{rho^*}|/|R_{het}|$ si $|R_{het} \gt 0$, sinon $cov =1$ et $R'=R$.
 
 #### Complétude des données
 
