@@ -551,6 +551,103 @@ Le dashboard présente les mesures de 4 facettes : Complétude, Unicité, Confor
 
 Le dashboard est exporté dans `superset/dashboards/qualite_des_donnees.zip` et importé automatiquement par `superset/init.sh` au démarrage de Superset (http://localhost:8088). Il reste vide tant que `data_quality_assessment` n'a pas été exécuté. Pour le mettre à jour dans le dépôt, il faut le ré-exporter depuis Superset (_Dashboards_ -> _Export_) et remplacer le zip.
 
+### Méta-modèle de la Qualité de données
+
+#### Stockage des mesures
+
+Les mesures sont stockées dans 9 fichiers parquet de `/data/data_quality/`, un par métrique. Ils sont **append-only** : un n-uplet est l'évaluation d'une règle (identifiée par sa clé naturelle) à l'instant `timestamp`, qui sert de version. Il n'y a pas de contrainte physique, donc les `FK` ci-dessous sont des clés étrangère logiques.
+
+```mermaid
+erDiagram
+    direction LR
+    completude {
+        string source FK
+        string column_name FK
+        double completude_percent
+        timestamp timestamp FK
+    }
+    unicite {
+        string source FK
+        string column_name FK
+        double unicite_percent
+        timestamp timestamp FK
+    }
+    conformite_fmt {
+        string source FK
+        string column_name FK
+        double format_percent
+        timestamp timestamp FK
+    }
+    conformite_label {
+        string source FK
+        string column_name FK
+        double labels_percent
+        timestamp timestamp FK
+    }
+    conformite_interval {
+        string source FK
+        string column_name_min FK
+        string column_name_target FK
+        string column_name_max FK
+        double interval_percent
+        timestamp timestamp FK
+    }
+    conformite_fk {
+        string source_1 FK
+        string column_name_1 FK
+        string source_2 FK
+        string column_name_2 FK
+        double fk_percent
+        timestamp timestamp FK
+    }
+    heterogeneite_dispersion {
+        string source_1 FK
+        string column_name_1 FK
+        string source_2 FK
+        string column_name_2 FK
+        double dispersion_score
+        timestamp timestamp FK
+    }
+    heterogeneite_ratio {
+        string source FK
+        string column_name_min FK
+        string column_name_mean FK
+        string column_name_max FK
+        double ratio_score
+        timestamp timestamp FK
+    }
+    coherence {
+        string source FK
+        string x FK
+        string y FK
+        double M1
+        double M2
+        double M3
+        timestamp timestamp FK
+    }
+    v_bi_qualite {
+        string dimension
+        string metrique
+        string source
+        string regle
+        double score
+        timestamp timestamp
+        boolean derniere_mesure
+        string ville
+    }
+
+    completude ||--|| v_bi_qualite : "UNION ALL"
+    unicite ||--|| v_bi_qualite : "UNION ALL"
+    conformite_fmt ||--|| v_bi_qualite : "UNION ALL"
+    conformite_label ||--|| v_bi_qualite : "UNION ALL"
+    conformite_interval ||--|| v_bi_qualite : "UNION ALL"
+    conformite_fk ||--|| v_bi_qualite : "UNION ALL"
+    heterogeneite_dispersion ||--|| v_bi_qualite : "UNION ALL"
+    heterogeneite_ratio ||--|| v_bi_qualite : "UNION ALL"
+    coherence ||--|| v_bi_qualite : "UNION ALL"
+```
+
+
 ## Amélioration de la Qualité de données
 
 ### Facettes & Solutions d'imputation :
