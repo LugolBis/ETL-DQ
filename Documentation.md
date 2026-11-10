@@ -707,31 +707,35 @@ $$
 | 2 | $(met,\ src)$ | qualité d'une métrique sur une source |
 | 3 | $(met)$ | qualité globale d'une métrique, toutes sources confondues |
 
-Chaque niveau est un grossissement du précédent : $(met, src, r) \succ (met, src) \succ (met)$. Une seule formule les couvre tous :
+Chaque niveau est un grossissement du précédent : $(met, src, r) \succ (met, src) \succ (met)$. Une seule formule couvre tous les niveaux. C'est une moyenne arithmétique simple, sans pondération :
 
 $$
 \bar\phi_G(g) = \frac{1}{|V^{\ast}_g|} \sum_{t \in V^{\ast}_g} t[\phi] \qquad \text{avec } V^{\ast}_g = \sigma_{G = g}(V^{\ast})
 $$
 
-Soit $\gamma_{G;\ avg(\phi) \to \bar\phi}(V^{\ast})$. Pour $m \in \mathcal{M}$, $s \in src$ et $R_{m,s} = \{r : (m,s,r) \in V^{\ast}\}$, on obtient :
+soit $\gamma_{G;\ avg(\phi) \to \bar\phi}(V^{\ast})$. Pour $m \in \mathcal{M}$ et $s \in src$, on note les règles courantes d'une métrique, puis d'une métrique sur une source :
+
+$$
+V^{\ast}_{m} = \sigma_{met = m}(V^{\ast}) \qquad V^{\ast}_{m,s} = \sigma_{met = m \,\land\, src = s}(V^{\ast})
+$$
 
 - **Niveau 1** :
 
-    $\bar\phi(m,s,r) = \phi^{\ast}(m,s,r)$
+$$
+\bar\phi(m,s,r) = \phi^{\ast}(m,s,r)
+$$
 
 - **Niveau 2** :
 
-    $\bar\phi(m,s) = \frac{1}{|R_{m,s}|} \sum_{r \in R_{m,s}} \phi^{\ast}(m,s,r)$
+$$
+\bar\phi(m,s) = \frac{1}{|V^{\ast}_{m,s}|} \sum_{r \in \pi_{r}(V^{\ast}_{m})} \bar\phi(m, s, r)
+$$
 
 - **Niveau 3** :
 
-    $`\bar\phi(m) = \frac{1}{|V^{\ast}_m|} \sum_{(s,r) \in V^{\ast}_m} \phi^{\ast}(m,s,r)`$
-
-**Pondération.** Le niveau 3 est une moyenne sur les règles, pas une moyenne des moyennes du niveau 2. Il pondère chaque source par son nombre de règles :
-
-$$\bar\phi(m) = \sum_{s} \frac{|R_{m,s}|}{|V^*_m|}\ \bar\phi(m,s)$$
-
-Pour donner le même poids à chaque source, il faut la moyenne en deux temps, $\frac{1}{|S_m|}\sum_{s} \bar\phi(m,s)$, qui demande une sous-requête.
+$$
+\bar\phi(m) = \frac{1}{|V^{\ast}_{m}|} \sum_{s \in \pi_{src}(V^{\ast}_{m})} \bar\phi(m, s)
+$$
 
 **Axes complémentaires.**
 - **Ville :** $ville$ est déterminée par $src$, donc les niveaux 1 et 2 la conservent. Au niveau 3, il faut l'ajouter à la clé, $G = (met, ville)$, sinon Paris, Évry et Commun sont mélangés.
