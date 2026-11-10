@@ -674,19 +674,30 @@ $$U = \biguplus_{m \in \mathcal{M}} \rho_m(T_m)$$
 
 **Étape 2 - Dernière version :** Soit $\kappa(t) = (dim, met, src, r)$ la clé de règle consolidée. On calcule la dernière date par règle, puis on la rattache à chaque n-uplet :
 
-$$D = \gamma_{\kappa;\ \max(\tau) \to \tau^*}(U) \qquad V = \pi_{U.*,\ \mathbb{1}[\tau = \tau^*] \to last,\ ville}\big(U \bowtie_{\kappa} D\big)$$
+$$
+D = \gamma_{\kappa;\ \max(\tau) \to \tau^{\ast}}(U) \qquad V = \pi_{U.\ast,\ \mathbb{1}[\tau = \tau^{\ast}] \to last,\ ville}\big(U \bowtie_{\kappa} D\big)
+$$
 
 La jointure se fait sur $\kappa$ seul, pas sur $\tau$. Chaque n-uplet de $U$ a donc exactement un partenaire dans $D$, et $|V| = |U|$ : **tout l'historique est conservé**, et $last$ distingue la version courante. Le score courant d'une règle est $\phi^*(\kappa) = \pi_\phi\big(\sigma_{last}(V)\big)$.
 
 **Étape 3 - Attribution de la ville :** Elle est dérivée de $src$ :
 
-$$ville(src) = \begin{cases} \text{Paris} & src \in \{population1,\ consommation1\} \\ \text{Évry} & src \in \{population2,\ consommation2\} \\ \text{Commun} & \text{sinon} \end{cases}$$
+$$
+ville(src) =
+\begin{cases}
+\text{Paris} & \text{si } src \in \{population1, consommation1\} \\
+\text{Évry} & \text{si } src \in \{population2, consommation2\} \\
+\text{Commun} & \text{sinon}
+\end{cases}
+$$
 
 Les $src$ composites ($R_1 \to R_2$, $R_1$ vs $R_2$) tombent toujours dans « Commun ».
 
 **Requêtes unitaires.** Les 8 requêtes « dernière mesure » appliquent le même principe table par table, avec la clé native $K_m$ :
 
-$$L_m = \sigma_{\tau = \tau^*}\big(T_m \bowtie_{K_m} \gamma_{K_m;\ \max(\tau) \to \tau^*}(T_m)\big)$$
+$$
+L_m = \sigma_{\tau = \tau^{\ast}}\big(T_m \bowtie_{K_m} \gamma_{K_m;\ \max(\tau) \to \tau^{\ast}}(T_m)\big)
+$$
 
 **Niveaux d'agrégation :** Les requêtes fournies ne calculent aucun score agrégé, mais elles les consolident, versionnent et étiquettent. L'agrégation se fait côté Superset, sur la version courante $V^* = \sigma_{last}(V)$. Son niveau de granularité se choisit par la clé de regroupement $G$ (le « Group By » du graphique), sans modifier la requête. Comme on a la _DF_ $met \rightarrow dim$, on peut l'omettre de $G$ sans perte.
 
@@ -698,13 +709,23 @@ $$L_m = \sigma_{\tau = \tau^*}\big(T_m \bowtie_{K_m} \gamma_{K_m;\ \max(\tau) \t
 
 Chaque niveau est un grossissement du précédent : $(met, src, r) \succ (met, src) \succ (met)$. Une seule formule les couvre tous :
 
-$$\bar\phi_G(g) = \frac{1}{|V^*_g|} \sum_{t \in V^*_g} t[\phi] \qquad \text{avec } V^*_g = \sigma_{G = g}(V^*)$$
+$$
+\bar\phi_G(g) = \frac{1}{|V^{\ast}_g|} \sum_{t \in V^{\ast}_g} t[\phi] \qquad \text{avec } V^{\ast}_g = \sigma_{G = g}(V^{\ast})
+$$
 
-soit $\gamma_{G;\ avg(\phi) \to \bar\phi}(V^*)$. Pour $m \in \mathcal{M}$, $s \in src$ et $R_{m,s} = \{r : (m,s,r) \in V^*\}$, on obtient :
+Soit $\gamma_{G;\ avg(\phi) \to \bar\phi}(V^{\ast})$. Pour $m \in \mathcal{M}$, $s \in src$ et $R_{m,s} = \{r : (m,s,r) \in V^{\ast}\}$, on obtient :
 
-- **Niveau 1** : $\bar\phi(m,s,r) = \phi^*(m,s,r)$
-- **Niveau 2 :** $\bar\phi(m,s) = \dfrac{1}{|R_{m,s}|} \displaystyle\sum_{r \in R_{m,s}} \phi^*(m,s,r)$
-- **Niveau 3 :** $\bar\phi(m) = \dfrac{1}{|V^*_m|} \displaystyle\sum_{(s,r) \in V^*_m} \phi^*(m,s,r)$
+- **Niveau 1** :
+
+    $\bar\phi(m,s,r) = \phi^{\ast}(m,s,r)$
+
+- **Niveau 2** :
+
+    $\bar\phi(m,s) = \frac{1}{|R_{m,s}|} \sum_{r \in R_{m,s}} \phi^{\ast}(m,s,r)$
+
+- **Niveau 3** :
+
+    $`\bar\phi(m) = \frac{1}{|V^{\ast}_m|} \sum_{(s,r) \in V^{\ast}_m} \phi^{\ast}(m,s,r)`$
 
 **Pondération.** Le niveau 3 est une moyenne sur les règles, pas une moyenne des moyennes du niveau 2. Il pondère chaque source par son nombre de règles :
 
