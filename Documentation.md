@@ -742,6 +742,11 @@ $$
 - **Dimension :** $G = (dim)$ ou $(dim, ville)$ est un niveau encore plus grossier. Il mélange des métriques de sémantique différente et n'est valide que si tous les $\phi$ sont dans la même unité (cf. point d'attention sur les `*_percent`).
 - **Historique :** En remplaçant $V^*$ par $V$ et en ajoutant $\tau$ à $G$, on obtient l'évolution temporelle de chaque niveau. Cela suppose que les règles soient mesurées au même $\tau$, sinon il faut discrétiser $\tau$ (par exemple par jour).
 
+> [!NOTE]
+> Ouverture : **Un Semantic Layer**
+> L'ajout d'un **Semantic Layer** pourrait simplifier et unifier l'implémentation des solutions permetant de faire le lien entre les données matérialisées (ici les métriques de qualité de données) et la couche de **BI**.
+> Cette composante de la **Data Governance** pourrait être appliquée à notre projet pour centraliser la définition des métriques et **KPI**. Simplifiant ainsi la documentation, collaboration entre les équipes et les choix de matérialisation des données.
+
 ## Amélioration de la Qualité de données
 
 ### Facettes & Solutions d'imputation :
