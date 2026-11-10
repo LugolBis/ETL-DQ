@@ -647,6 +647,75 @@ erDiagram
     coherence ||--|| v_bi_qualite : "UNION ALL"
 ```
 
+#### Agrégation par les requêtes BI
+
+**Notations :**
+
+Soit $\mathcal{M} = \{compl, uniq, fmt, lab, int, fk, disp, RP, coherence\}$ l'ensemble des métriques consolidées. Pour $m \in \mathcal{M}$, $T_m$ est la relation matérialisée, de schéma $(K_m, \phi_m, \tau)$ :
+- $K_m$ est la clé de règle ;
+- $\phi_m \in [0,1]$ est le score défini en section Métriques ;
+- $\tau$ est l'horodatage, c'est-à-dire la version.
+
+**Étape 1 - Normalisation :** Chaque $T_m$ est projetée vers un schéma commun $(dim, met, src, r, \phi, \tau)$ par $\rho_m$, puis les projections sont unies avec conservation des doublons ($\uplus$ = `UNION ALL`) :
+
+$$U = \biguplus_{m \in \mathcal{M}} \rho_m(T_m)$$
+
+| $m$ | Table | $(dim,\ met)$ | $src$ | $r$ | $\phi$ |
+|---|---|---|---|---|---|
+| $compl$ | `completude` | Complétude, Valeurs non nulles | `source` | `column_name` | $\phi_{compl}$ |
+| $uniq$ | `unicite` | Unicité, Absence de doublons | `source` | `column_name` | $\phi_{uniq}$ |
+| $fmt$ | `conformite_fmt` | Conformité, Format | `source` | `column_name` | $\phi_p$ |
+| $lab$ | `conformite_label` | Conformité, Valeurs autorisées | `source` | `column_name` | $\phi_L$ |
+| $int$ | `conformite_interval` | Conformité, Intervalle | `source` | $x \leq y \leq z$ | $\phi(x,y,z)$ |
+| $fk$ | `conformite_fk` | Conformité, Clé étrangère | $R_1 \to R_2$ | $c_1 \to c_2$ | $\Phi_{fk}$ |
+| $disp$ | `heterogeneite_dispersion` | Hétérogénéité, Dispersion entre sources | $R_1$ vs $R_2$ | $c_1$ | $\phi_{d_{CV}}$ |
+| $RP$ | `heterogeneite_ratio` | Hétérogénéité, Position de la moyenne | `source` | $x / y / z$ | $\phi_{RP}$ |
+| $coherence$ | `coherence` | Cohérence, Règles métier candidates violées | `source` | $x, y$ | $\phi_{coherence}$
+
+**Étape 2 - Dernière version :** Soit $\kappa(t) = (dim, met, src, r)$ la clé de règle consolidée. On calcule la dernière date par règle, puis on la rattache à chaque n-uplet :
+
+$$D = \gamma_{\kappa;\ \max(\tau) \to \tau^*}(U) \qquad V = \pi_{U.*,\ \mathbb{1}[\tau = \tau^*] \to last,\ ville}\big(U \bowtie_{\kappa} D\big)$$
+
+La jointure se fait sur $\kappa$ seul, pas sur $\tau$. Chaque n-uplet de $U$ a donc exactement un partenaire dans $D$, et $|V| = |U|$ : **tout l'historique est conservé**, et $last$ distingue la version courante. Le score courant d'une règle est $\phi^*(\kappa) = \pi_\phi\big(\sigma_{last}(V)\big)$.
+
+**Étape 3 - Attribution de la ville :** Elle est dérivée de $src$ :
+
+$$ville(src) = \begin{cases} \text{Paris} & src \in \{population1,\ consommation1\} \\ \text{Évry} & src \in \{population2,\ consommation2\} \\ \text{Commun} & \text{sinon} \end{cases}$$
+
+Les $src$ composites ($R_1 \to R_2$, $R_1$ vs $R_2$) tombent toujours dans « Commun ».
+
+**Requêtes unitaires.** Les 8 requêtes « dernière mesure » appliquent le même principe table par table, avec la clé native $K_m$ :
+
+$$L_m = \sigma_{\tau = \tau^*}\big(T_m \bowtie_{K_m} \gamma_{K_m;\ \max(\tau) \to \tau^*}(T_m)\big)$$
+
+**Niveaux d'agrégation :** Les requêtes fournies ne calculent aucun score agrégé, mais elles les consolident, versionnent et étiquettent. L'agrégation se fait côté Superset, sur la version courante $V^* = \sigma_{last}(V)$. Son niveau de granularité se choisit par la clé de regroupement $G$ (le « Group By » du graphique), sans modifier la requête. Comme on a la _DF_ $met \rightarrow dim$, on peut l'omettre de $G$ sans perte.
+
+| Niveau | $G$ | Lecture |
+|---|---|---|
+| 1 (défaut) | $(met,\ src,\ r)$ | score courant de chaque règle |
+| 2 | $(met,\ src)$ | qualité d'une métrique sur une source |
+| 3 | $(met)$ | qualité globale d'une métrique, toutes sources confondues |
+
+Chaque niveau est un grossissement du précédent : $(met, src, r) \succ (met, src) \succ (met)$. Une seule formule les couvre tous :
+
+$$\bar\phi_G(g) = \frac{1}{|V^*_g|} \sum_{t \in V^*_g} t[\phi] \qquad \text{avec } V^*_g = \sigma_{G = g}(V^*)$$
+
+soit $\gamma_{G;\ avg(\phi) \to \bar\phi}(V^*)$. Pour $m \in \mathcal{M}$, $s \in src$ et $R_{m,s} = \{r : (m,s,r) \in V^*\}$, on obtient :
+
+- **Niveau 1** : $\bar\phi(m,s,r) = \phi^*(m,s,r)$
+- **Niveau 2 :** $\bar\phi(m,s) = \dfrac{1}{|R_{m,s}|} \displaystyle\sum_{r \in R_{m,s}} \phi^*(m,s,r)$
+- **Niveau 3 :** $\bar\phi(m) = \dfrac{1}{|V^*_m|} \displaystyle\sum_{(s,r) \in V^*_m} \phi^*(m,s,r)$
+
+**Pondération.** Le niveau 3 est une moyenne sur les règles, pas une moyenne des moyennes du niveau 2. Il pondère chaque source par son nombre de règles :
+
+$$\bar\phi(m) = \sum_{s} \frac{|R_{m,s}|}{|V^*_m|}\ \bar\phi(m,s)$$
+
+Pour donner le même poids à chaque source, il faut la moyenne en deux temps, $\frac{1}{|S_m|}\sum_{s} \bar\phi(m,s)$, qui demande une sous-requête.
+
+**Axes complémentaires.**
+- **Ville :** $ville$ est déterminée par $src$, donc les niveaux 1 et 2 la conservent. Au niveau 3, il faut l'ajouter à la clé, $G = (met, ville)$, sinon Paris, Évry et Commun sont mélangés.
+- **Dimension :** $G = (dim)$ ou $(dim, ville)$ est un niveau encore plus grossier. Il mélange des métriques de sémantique différente et n'est valide que si tous les $\phi$ sont dans la même unité (cf. point d'attention sur les `*_percent`).
+- **Historique :** En remplaçant $V^*$ par $V$ et en ajoutant $\tau$ à $G$, on obtient l'évolution temporelle de chaque niveau. Cela suppose que les règles soient mesurées au même $\tau$, sinon il faut discrétiser $\tau$ (par exemple par jour).
 
 ## Amélioration de la Qualité de données
 
