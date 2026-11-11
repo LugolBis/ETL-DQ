@@ -670,7 +670,7 @@ $$U = \biguplus_{m \in \mathcal{M}} \rho_m(T_m)$$
 | $fk$ | `conformite_fk` | Conformité, Clé étrangère | $R_1 \to R_2$ | $c_1 \to c_2$ | $\Phi_{fk}$ |
 | $disp$ | `heterogeneite_dispersion` | Hétérogénéité, Dispersion entre sources | $R_1$ vs $R_2$ | $c_1$ | $\phi_{d_{CV}}$ |
 | $RP$ | `heterogeneite_ratio` | Hétérogénéité, Position de la moyenne | `source` | $x / y / z$ | $\phi_{RP}$ |
-| $coherence$ | `coherence` | Cohérence, Règles métier candidates violées | `source` | $x, y$ | $\phi_{coherence}$
+| $coherence$ | `coherence` | Cohérence, Règles métier candidates respectées | `source` | toutes les paires $(x, y)$ | $\phi_{coherence}$
 
 **Étape 2 - Dernière version :** Soit $\kappa(t) = (dim, met, src, r)$ la clé de règle consolidée. On calcule la dernière date par règle, puis on la rattache à chaque n-uplet :
 

@@ -20,7 +20,7 @@ def coherence_assessment(
         analyze_grouped_distribution(
             DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read(), seuil
         )
-        .filter((pl.col("M1") > 0.50) & ((pl.col("M2") > 5) | (pl.col("M3") > 10)))
+        .filter(pl.col("M1") > 0.50)  # R_detected : la violation (M2, M3) est évaluée côté BI
         .with_columns(
             pl.lit(datetime.now(ZoneInfo("UTC"))).alias("timestamp"),
             pl.lit(name).alias("source"),
