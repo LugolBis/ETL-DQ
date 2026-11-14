@@ -801,7 +801,7 @@ t[C' \leftarrow \text{NULL}] & \text{sinon}
 $$
 
 $$
-\mathcal{K}_{interval}(R, K, C', \mathcal{O}, s_a) = \sigma_{key(.) \notin K}(R) \cup \{\mathcal{T}(t, C', \mathcal{O}, s_a) \mid t \in \sigma_{key(.) \in K}(R)\}
+\mathcal{K}_{interval}(R, K, C', \mathcal{O}, s_a) = \sigma_{key(.) \notin K}(R) \cup \lbrace \mathcal{T}(t, C', \mathcal{O}, s_a) \mid t \in \sigma_{key(.) \in K}(R) \rbrace
 $$
 
 - Validité des formats extra sources :
@@ -841,7 +841,7 @@ x & \text{sinon }
 $$
     
 $$
-\mathcal{K}_{\mathrm{disp}}(R_1, R_2, c_1, c_2, \mathcal{FC}, s_{fc}) = \{t[c_1] \mapsto \mathcal{T}(t[c_1], \mathcal{FC}, s_{fc}), t[C_1 \setminus c_1] \mid t\in R_1\}
+\mathcal{K}_{\mathrm{disp}}(R_1, R_2, c_1, c_2, \mathcal{FC}, s_{fc}) = \lbrace t[c_1] \mapsto \mathcal{T}(t[c_1], \mathcal{FC}, s_{fc}), t[C_1 \setminus c_1] \mid t\in R_1 \rbrace
 $$
 
 - RP intra-source :
