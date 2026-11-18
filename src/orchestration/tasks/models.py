@@ -4,7 +4,7 @@ import os
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import polars as pl
 
@@ -32,6 +32,7 @@ _ALLOWED_KWARGS: dict[FileType, frozenset[str]] = {
     FileType.EXCEL: frozenset(),
     FileType.AVRO: frozenset(),
     FileType.IPC: frozenset({"n_rows", "columns"}),
+    FileType.DELTA: frozenset({"columns", "delta_table_options"}),
 }
 
 _READERS: dict[FileType, Callable[..., pl.DataFrame]] = {
@@ -42,6 +43,7 @@ _READERS: dict[FileType, Callable[..., pl.DataFrame]] = {
     FileType.EXCEL: pl.read_excel,
     FileType.AVRO: pl.read_avro,
     FileType.IPC: pl.read_ipc,
+    FileType.DELTA: pl.read_delta,
 }
 
 # Writers consts
@@ -65,7 +67,9 @@ _ALLOWED_WRITER_KWARGS: dict[FileType, frozenset[str]] = {
     FileType.EXCEL: frozenset(),
     FileType.AVRO: frozenset({"compression"}),
     FileType.IPC: frozenset({"compression"}),
+    FileType.DELTA: frozenset({"mode", "delta_write_options"}),
 }
+
 _WRITER_METHODS: dict[FileType, str] = {
     FileType.CSV: "write_csv",
     FileType.PARQUET: "write_parquet",
@@ -74,6 +78,7 @@ _WRITER_METHODS: dict[FileType, str] = {
     FileType.EXCEL: "write_excel",
     FileType.AVRO: "write_avro",
     FileType.IPC: "write_ipc",
+    FileType.DELTA: "write_delta",
 }
 
 
@@ -93,6 +98,9 @@ class DfReader:
     encoding: str = "utf8"
     skip_rows: int = 0
     try_parse_dates: bool = False
+
+    # Delta table
+    delta_table_options: dict[str, Any] | None = None
 
     # Shared
     n_rows: int | None = None
@@ -135,6 +143,10 @@ class DfWriter:
     # Parquet / IPC / Avro
     compression: str | None = None
     row_group_size: int | None = None
+
+    # Delta table
+    mode: str | None = None
+    delta_write_options: dict[str, Any] | None = None
 
     def _kwargs(self) -> dict:
         data = asdict(self)

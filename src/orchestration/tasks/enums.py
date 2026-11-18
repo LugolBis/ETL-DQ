@@ -11,6 +11,7 @@ class FileType(Enum):
     EXCEL = "excel"
     AVRO = "avro"
     IPC = "ipc"
+    DELTA = "delta"
 
     @classmethod
     def _missing_(cls, value: object) -> FileType | None:
