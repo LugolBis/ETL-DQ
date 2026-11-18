@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 import polars as pl
@@ -37,14 +38,17 @@ type CONFORMITE_FK_ALL_TYPE = tuple[
 
 @task()
 def conformite_format_assessment(
-    cfg: CONFORMITE_FMT_TYPE, data_dir: Path, df_w: DfWriter
+    cfg: CONFORMITE_FMT_TYPE, data_dir: Path, df_w: DfWriter, timestamp: str
 ) -> None:
+    timestamp_dt = datetime.fromisoformat(timestamp)
+
     dfs = [
         text_format(
             DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read(),
             columns,
             regex,
             name,
+            timestamp_dt,
         )
         for name, patterns in cfg.items()
         for (columns, regex) in patterns
@@ -57,14 +61,17 @@ def conformite_format_assessment(
 
 @task()
 def conformite_label_assessment(
-    cfg: CONFORMITE_LABEL_TYPE, data_dir: Path, df_w: DfWriter
+    cfg: CONFORMITE_LABEL_TYPE, data_dir: Path, df_w: DfWriter, timestamp: str
 ) -> None:
+    timestamp_dt = datetime.fromisoformat(timestamp)
+
     dfs = [
         label_set(
             DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read(),
             columns,
             labels,
             name,
+            timestamp_dt,
         )
         for name, (columns, labels) in cfg.items()
     ]
@@ -76,13 +83,16 @@ def conformite_label_assessment(
 
 @task()
 def conformite_interval_assessment(
-    cfg: CONFORMITE_INTERVAL_TYPE, data_dir: Path, df_w: DfWriter
+    cfg: CONFORMITE_INTERVAL_TYPE, data_dir: Path, df_w: DfWriter, timestamp: str
 ) -> None:
+    timestamp_dt = datetime.fromisoformat(timestamp)
+
     dfs = [
         interval_validity(
             DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read(),
             columns,
             name,
+            timestamp_dt,
         )
         for name, columns in cfg.items()
     ]
@@ -94,11 +104,13 @@ def conformite_interval_assessment(
 
 @task()
 def conformite_foreign_key_assessment(
-    cfg: CONFORMITE_FK_ALL_TYPE, data_dir: Path, df_w: DfWriter
+    cfg: CONFORMITE_FK_ALL_TYPE, data_dir: Path, df_w: DfWriter, timestamp: str
 ) -> None:
     """
     `cfg` = (exact FK, fuzzy FK, address FK)
     """
+
+    timestamp_dt = datetime.fromisoformat(timestamp)
 
     cfg_exact, cfg_fuzzy, cfg_adresse = cfg
     read_pqt: Callable[[str], DataFrame] = lambda file_name: DfReader(
@@ -106,7 +118,7 @@ def conformite_foreign_key_assessment(
     ).read()
 
     dfs = [
-        fn(read_pqt(name_1), read_pqt(name_2), columns, (name_1, name_2))
+        fn(read_pqt(name_1), read_pqt(name_2), columns, (name_1, name_2), timestamp_dt)
         for fn, cfg_fk in (
             (foreign_key_validity, cfg_exact),
             (fuzzy_foreign_key_validity, cfg_fuzzy),
@@ -124,6 +136,7 @@ def conformite_foreign_key_assessment(
                 replace_patterns,
                 keys,
                 (name_1, name_2),
+                timestamp_dt,
             )
             for (name_1, name_2), (
                 column,
@@ -149,15 +162,18 @@ def conformite_assessment(
     ],
     data_dir: Path,
     df_ws: tuple[DfWriter, DfWriter, DfWriter, DfWriter],
+    timestamp: str,
 ) -> None:
     """The order of the `cfg` is important, it will be used to map each `cfg` with a `DfWriter` in `df_ws`."""
 
     start = EmptyOperator(task_id="start_conformite_assessment")
     end = EmptyOperator(task_id="end_conformite_assessment")
 
-    task_fmt = conformite_format_assessment(cfg[0], data_dir, df_ws[0])
-    task_label = conformite_label_assessment(cfg[1], data_dir, df_ws[1])
-    task_interval = conformite_interval_assessment(cfg[2], data_dir, df_ws[2])
-    task_fk = conformite_foreign_key_assessment(cfg[3], data_dir, df_ws[3])
+    task_fmt = conformite_format_assessment(cfg[0], data_dir, df_ws[0], timestamp)
+    task_label = conformite_label_assessment(cfg[1], data_dir, df_ws[1], timestamp)
+    task_interval = conformite_interval_assessment(
+        cfg[2], data_dir, df_ws[2], timestamp
+    )
+    task_fk = conformite_foreign_key_assessment(cfg[3], data_dir, df_ws[3], timestamp)
 
     start >> [task_fmt, task_label, task_interval, task_fk] >> end

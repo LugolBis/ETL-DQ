@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 import polars as pl
@@ -13,7 +14,10 @@ def unicite_assessment(
     cfg: list[tuple[list[str], list[str]]],
     data_dir: Path,
     df_w: DfWriter,
+    timestamp: str,
 ) -> None:
+    timestamp_dt = datetime.fromisoformat(timestamp)
+
     dfs = [
         compute_unicite(
             pl.concat(
@@ -26,6 +30,7 @@ def unicite_assessment(
             ),
             columns,
             "+".join(names),
+            timestamp_dt,
         )
         for names, columns in cfg
     ]

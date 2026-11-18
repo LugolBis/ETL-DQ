@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import polars as pl
 from airflow.sdk import task
@@ -12,17 +11,17 @@ from orchestration.tasks.models import DfReader, DfWriter
 
 @task()
 def coherence_assessment(
-    cfg: list[tuple[str, float]],
-    data_dir: Path,
-    df_w: DfWriter,
+    cfg: list[tuple[str, float]], data_dir: Path, df_w: DfWriter, timestamp: str
 ) -> None:
+    timestamp_dt = datetime.fromisoformat(timestamp)
+
     dfs = [
         analyze_grouped_distribution(
             DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read(), seuil
         )
         .filter(pl.col("M1") > 0.50)  # R_detected : la violation (M2, M3) est évaluée côté BI
         .with_columns(
-            pl.lit(datetime.now(ZoneInfo("UTC"))).alias("timestamp"),
+            pl.lit(timestamp_dt).alias("timestamp"),
             pl.lit(name).alias("source"),
         )
         for name, seuil in cfg

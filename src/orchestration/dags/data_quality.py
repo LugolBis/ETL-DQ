@@ -31,6 +31,7 @@ from orchestration.tasks.data_quality.heterogeneite import (
 from orchestration.tasks.data_quality.unicite import unicite_assessment
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.extract.system import ensure_extracted
+from orchestration.tasks.load.system import get_timestamp
 from orchestration.tasks.models import DfWriter
 
 DATA_DIR = Path("/opt/airflow/.data")
@@ -51,6 +52,8 @@ DQ_DIR = DATA_DIR / "data_quality"
 def data_quality_assessment():
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
+
+    task_timestamp = get_timestamp()
 
     # We use transitives dependencies to cover all of the dependencies
     # with a min `sources_deps`
@@ -77,6 +80,7 @@ def data_quality_assessment():
             DQ_DIR / "completude.parquet",
             FileType.PARQUET,
         ),
+        task_timestamp,  # ty: ignore[invalid-argument-type]
     )
 
     # 2. Coherence
@@ -87,6 +91,7 @@ def data_quality_assessment():
             DQ_DIR / "coherence.parquet",
             FileType.PARQUET,
         ),
+        task_timestamp,  # ty: ignore[invalid-argument-type]
     )
 
     # 3. Conformite
@@ -116,6 +121,7 @@ def data_quality_assessment():
                 FileType.PARQUET,
             ),
         ),
+        task_timestamp,  # ty: ignore[invalid-argument-type]
     )
 
     # 4. Unicite
@@ -126,6 +132,7 @@ def data_quality_assessment():
             DQ_DIR / "unicite.parquet",
             FileType.PARQUET,
         ),
+        task_timestamp,  # ty: ignore[invalid-argument-type]
     )
 
     # 5. Heterogeneite
@@ -150,30 +157,25 @@ def data_quality_assessment():
                 FileType.PARQUET,
             ),
         ),
+        task_timestamp,  # ty: ignore[invalid-argument-type]
     )
 
     # Tasks chaining - HITL
     for source_id, file_paths in sources_deps:
-        (
-            start
-            >> ensure_extracted(source_id, file_paths)
-            >> [
-                task_completude,
-                task_coherence,
-                task_grp_conformite,
-                task_unicite,
-                task_grp_heterogeneite,
-            ]
-        )
+        (start >> ensure_extracted(source_id, file_paths) >> task_timestamp)
 
     # Wait for all five quality assessments before ending
-    [
-        task_completude,
-        task_coherence,
-        task_grp_conformite,
-        task_unicite,
-        task_grp_heterogeneite,
-    ] >> end
+    (
+        task_timestamp
+        >> [
+            task_completude,
+            task_coherence,
+            task_grp_conformite,
+            task_unicite,
+            task_grp_heterogeneite,
+        ]
+        >> end
+    )
 
 
 dag_instance = data_quality_assessment()

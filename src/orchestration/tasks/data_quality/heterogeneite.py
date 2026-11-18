@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import polars as pl
 from airflow.providers.standard.operators.empty import EmptyOperator
@@ -32,31 +31,13 @@ def lire_source(data_dir: Path, source: str) -> pl.DataFrame:
     ).read()
 
 
-def creer_resultat(
-    source: str,
-    colonne: str,
-    metrique: str,
-    valeur: float,
-) -> dict:
-    """Creer une ligne de resultat avec le schema commun."""
-    return {
-        "source": source,
-        "column_name": colonne,
-        "metric": metrique,
-        "value": valeur,
-        "timestamp": datetime.now(ZoneInfo("UTC")),
-    }
-
-
 # 1. Difference de dispersion
 @task()
 def heterogeneite_dispersion_assessment(
-    cfg: HETEROGENEITE_DISPERSION_TYPE,
-    data_dir: Path,
-    df_w: DfWriter,
+    cfg: HETEROGENEITE_DISPERSION_TYPE, data_dir: Path, df_w: DfWriter, timestamp: str
 ) -> None:
     resultats = []
-    timestamp = datetime.now(ZoneInfo("UTC"))
+    timestamp_dt = datetime.fromisoformat(timestamp)
 
     for source1, colonne1, source2, colonne2 in cfg:
         df1 = lire_source(data_dir, source1)
@@ -80,7 +61,7 @@ def heterogeneite_dispersion_assessment(
                 "column_name_2": colonne2,
                 "difference_dispersion": difference,
                 "dispersion_score": score_dispersion(difference),
-                "timestamp": timestamp,
+                "timestamp": timestamp_dt,
             }
         )
 
@@ -90,12 +71,10 @@ def heterogeneite_dispersion_assessment(
 # 2. Ratio de position
 @task()
 def heterogeneite_ratio_assessment(
-    cfg: HETEROGENEITE_RATIO_TYPE,
-    data_dir: Path,
-    df_w: DfWriter,
+    cfg: HETEROGENEITE_RATIO_TYPE, data_dir: Path, df_w: DfWriter, timestamp: str
 ) -> None:
     resultats = []
-    timestamp = datetime.now(ZoneInfo("UTC"))
+    timestamp_dt = datetime.fromisoformat(timestamp)
 
     for source, configurations in cfg.items():
         df = lire_source(data_dir, source)
@@ -126,7 +105,7 @@ def heterogeneite_ratio_assessment(
                     "column_name_max": colonne_max,
                     "ratio_position": ratio,
                     "ratio_score": score_ratio_position(ratio),
-                    "timestamp": timestamp,
+                    "timestamp": timestamp_dt,
                 }
             )
 
@@ -143,6 +122,7 @@ def heterogeneite_assessment(
     ],
     data_dir: Path,
     df_ws: tuple[DfWriter, DfWriter, DfWriter],
+    timestamp: str,
 ) -> None:
     """
     Regrouper les trois metriques d'heterogeneite.
@@ -161,15 +141,9 @@ def heterogeneite_assessment(
     end = EmptyOperator(task_id="end_heterogeneite_assessment")
 
     task_dispersion = heterogeneite_dispersion_assessment(
-        cfg[1],
-        data_dir,
-        df_ws[1],
+        cfg[1], data_dir, df_ws[1], timestamp
     )
 
-    task_ratio = heterogeneite_ratio_assessment(
-        cfg[2],
-        data_dir,
-        df_ws[2],
-    )
+    task_ratio = heterogeneite_ratio_assessment(cfg[2], data_dir, df_ws[2], timestamp)
 
     start >> [task_dispersion, task_ratio] >> end

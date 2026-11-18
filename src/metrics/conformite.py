@@ -1,6 +1,5 @@
 from collections.abc import Sequence
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import polars as pl
 from polars import DataFrame
@@ -9,13 +8,9 @@ from orchestration.tasks.transform.helpers import expand_column, fuzzy_join
 
 
 def text_format(
-    df: pl.DataFrame,
-    columns: list[str],
-    regex: str,
-    source: str,
+    df: pl.DataFrame, columns: list[str], regex: str, source: str, timestamp: datetime
 ) -> DataFrame:
     n = df.height
-    timestamp = datetime.now(ZoneInfo("UTC"))
 
     counts = df.select(pl.col(columns).cast(pl.String).str.contains(regex).sum())
 
@@ -38,9 +33,9 @@ def label_set(
     columns: list[str],
     labels: list[str] | list[float] | list[int],
     source: str,
+    timestamp: datetime,
 ) -> DataFrame:
     n = df.height
-    timestamp = datetime.now(ZoneInfo("UTC"))
 
     labels_percent = [df[col].is_in(labels).sum() / n for col in columns]
 
@@ -55,10 +50,9 @@ def label_set(
 
 
 def interval_validity(
-    df: DataFrame, columns: list[tuple[str, str, str]], source: str
+    df: DataFrame, columns: list[tuple[str, str, str]], source: str, timestamp: datetime
 ) -> DataFrame:
     n = df.height
-    timestamp = datetime.now(ZoneInfo("UTC"))
 
     to_cast = set()
     for column_group in columns:
@@ -107,6 +101,7 @@ def foreign_key_validity(
     df2: DataFrame,
     columns: list[tuple[str, str]],
     sources: tuple[str, str],
+    timestamp: datetime,
 ) -> DataFrame:
     """
     We check the percent of values for the `columns` pairs, in the `df1` that are included in the `df2`.
@@ -114,7 +109,6 @@ def foreign_key_validity(
     """
 
     n = df1.height
-    timestamp = datetime.now(ZoneInfo("UTC"))
     src1, src2 = sources
 
     result = pl.concat(
@@ -144,6 +138,7 @@ def fuzzy_foreign_key_validity(
     df2: DataFrame,
     columns: list[tuple[str, str]],
     sources: tuple[str, str],
+    timestamp: datetime,
 ) -> DataFrame:
     """
     Same output as `foreign_key_validity`, but a value of `df1` is valid if it
@@ -151,7 +146,6 @@ def fuzzy_foreign_key_validity(
     """
 
     n = df1.height
-    timestamp = datetime.now(ZoneInfo("UTC"))
     src1, src2 = sources
 
     result = pl.DataFrame(
@@ -181,6 +175,7 @@ def expand_foreign_key_validity(
     replace_patterns: Sequence[tuple[str, str]],
     keys: list[str],
     sources: tuple[str, str],
+    timestamp: datetime,
 ) -> DataFrame:
     """
     The function use `expand_column(df1, column, extractions, replace_patterns)` before joining the result to `df2`
@@ -192,7 +187,6 @@ def expand_foreign_key_validity(
     """
 
     n = df1.height
-    timestamp = datetime.now(ZoneInfo("UTC"))
     src1, src2 = sources
 
     df1_expanded = expand_column(
