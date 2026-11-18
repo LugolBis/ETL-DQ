@@ -10,6 +10,8 @@ import polars as pl
 
 from .enums import FileType
 
+_MISSING = object()
+
 # Readers consts
 _ALLOWED_KWARGS: dict[FileType, frozenset[str]] = {
     FileType.CSV: frozenset(
@@ -208,3 +210,30 @@ class DfWriter:
             tmp.unlink(missing_ok=True)
 
         return
+
+    def override(self, **kwargs: Any) -> DfWriter:
+        """
+        Return a copy of the DfWriter with all the `kwargs` changed.
+        """
+
+        cls = type(self)
+        new = object.__new__(cls)
+        fields = cls.__dataclass_fields__
+
+        for name in fields:
+            value = kwargs.pop(name, _MISSING)
+
+            if value is _MISSING:
+                value = getattr(self, name)
+
+            object.__setattr__(new, name, value)
+
+        if kwargs:
+            unexpected = ", ".join(kwargs)
+
+            raise TypeError(
+                f"{cls.__name__}.override() got unexpected "
+                f"keyword argument(s): {unexpected}"
+            )
+
+        return new
