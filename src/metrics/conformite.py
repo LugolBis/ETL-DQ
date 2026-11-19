@@ -7,25 +7,51 @@ from polars import DataFrame
 from orchestration.tasks.transform.helpers import expand_column, fuzzy_join
 
 
+def _get_df_rids(df_bitmap: DataFrame, columns: list[str], source: str) -> DataFrame:
+    return (
+        df_bitmap.unpivot(
+            on=columns,
+            variable_name="column_name",
+            value_name="is_failed",
+        )
+        .filter(pl.col("is_failed"))
+        .select(
+            pl.lit(source).alias("source"),
+            "column_name",
+            "row_id",
+        )
+    )
+
+
 def text_format(
-    df: pl.DataFrame, columns: list[str], regex: str, source: str, timestamp: datetime
-) -> DataFrame:
+    df: DataFrame, columns: list[str], regex: str, source: str, timestamp: datetime
+) -> tuple[DataFrame, DataFrame]:
     n = df.height
 
-    counts = df.select(pl.col(columns).cast(pl.String).str.contains(regex).sum())
-
-    result = counts.unpivot(
-        on=columns,
-        variable_name="column_name",
-        value_name="match_count",
+    df_bitmap = df.select(
+        pl.int_range(0, pl.len(), dtype=pl.Int64).alias("row_id"),
+        *(
+            pl.col(c).cast(pl.String).str.contains(regex).not_().alias(c)
+            for c in columns
+        ),
     )
 
-    return result.select(
-        pl.lit(source).alias("source"),
-        pl.col("column_name"),
-        (pl.col("match_count") / n).alias("format_percent"),
-        pl.lit(timestamp).alias("timestamp"),
+    df_rids = _get_df_rids(df_bitmap, columns, source).with_columns(
+        pl.lit(regex).alias("regex")
     )
+
+    df_metric = (
+        df_bitmap.select([pl.col(c).sum().alias(c) for c in columns])
+        .unpivot(on=columns, variable_name="column_name", value_name="fail_count")
+        .select(
+            pl.lit(source).alias("source"),
+            "column_name",
+            (pl.lit(1.0) - pl.col("fail_count") / n).alias("format_percent"),
+            pl.lit(timestamp).alias("timestamp"),
+        )
+    )
+
+    return df_rids, df_metric
 
 
 def label_set(
@@ -34,66 +60,78 @@ def label_set(
     labels: list[str] | list[float] | list[int],
     source: str,
     timestamp: datetime,
-) -> DataFrame:
+) -> tuple[DataFrame, DataFrame]:
     n = df.height
 
-    labels_percent = [df[col].is_in(labels).sum() / n for col in columns]
-
-    return pl.DataFrame(
-        {
-            "source": source,
-            "column_name": columns,
-            "labels_percent": labels_percent,
-            "timestamp": timestamp,
-        }
+    df_bitmap = df.select(
+        pl.int_range(0, pl.len(), dtype=pl.Int64).alias("row_id"),
+        *(pl.col(c).is_in(labels).not_().alias(c) for c in columns),
     )
+
+    df_rids = _get_df_rids(df_bitmap, columns, source)
+
+    df_metric = (
+        df_bitmap.select([pl.col(c).sum().alias(c) for c in columns])
+        .unpivot(on=columns, variable_name="column_name", value_name="fail_count")
+        .select(
+            pl.lit(source).alias("source"),
+            "column_name",
+            (pl.lit(1.0) - pl.col("fail_count") / n).alias("labels_percent"),
+            pl.lit(timestamp).alias("timestamp"),
+        )
+    )
+
+    return df_rids, df_metric
 
 
 def interval_validity(
     df: DataFrame, columns: list[tuple[str, str, str]], source: str, timestamp: datetime
-) -> DataFrame:
+) -> tuple[DataFrame, DataFrame]:
     n = df.height
+    triple_names = [f"{c0}|{c1}|{c2}" for c0, c1, c2 in columns]
 
-    to_cast = set()
-    for column_group in columns:
-        for column in column_group:
-            to_cast.add(column)
+    def _cast_expr(c: str) -> pl.Expr:
+        return pl.col(c).cast(pl.String).str.replace_all(r"\s+", "").cast(pl.Float64)
 
-    casts = []
-    for column in to_cast:
-        casts.append(
-            pl.col(column).cast(pl.String).str.replace_all(r"\s+", "").cast(pl.Float64)
-        )
-
-    df = df.with_columns(casts)
-
-    exprs: list[pl.Expr] = []
-    for c0, c1, c2 in columns:
-        exprs.append((~((pl.col(c0) <= pl.col(c1)) & (pl.col(c1) <= pl.col(c2)))).sum())
-
-    counts = df.select(exprs).row(0)  # tuple des comptes
-
-    results = []
-    for (c0, c1, c2), count in zip(columns, counts):
-        results.append(
-            {
-                "column_name_min": c0,
-                "column_name_target": c1,
-                "column_name_max": c2,
-                "count": count,
-            }
-        )
-
-    result = pl.DataFrame(results)
-
-    return result.select(
-        pl.lit(source).alias("source"),
-        pl.col("column_name_min"),
-        pl.col("column_name_target"),
-        pl.col("column_name_max"),
-        (1 - pl.col("count") / n).alias("interval_percent"),
-        pl.lit(timestamp).alias("timestamp"),
+    df_bitmap = df.select(
+        pl.int_range(0, pl.len()).cast(pl.Int64).alias("row_id"),
+        *(
+            (
+                ~(
+                    (_cast_expr(c0) <= _cast_expr(c1))
+                    & (_cast_expr(c1) <= _cast_expr(c2))
+                )
+            ).alias(tname)
+            for (c0, c1, c2), tname in zip(columns, triple_names)
+        ),
     )
+
+    df_rids = _get_df_rids(df_bitmap, triple_names, source)
+
+    df_meta = pl.DataFrame(
+        {
+            "column_name": triple_names,
+            "column_name_min": [c0 for c0, _, _ in columns],
+            "column_name_target": [c1 for _, c1, _ in columns],
+            "column_name_max": [c2 for _, _, c2 in columns],
+        }
+    )
+
+    df_metric = (
+        df_bitmap.select([pl.col(tname).sum().alias(tname) for tname in triple_names])
+        .unpivot(variable_name="column_name", value_name="count")
+        .join(df_meta, on="column_name", how="left")
+        .select(
+            pl.lit(source).alias("source"),
+            "column_name_min",
+            "column_name_target",
+            "column_name_max",
+            (1.0 - pl.col("count") / n).alias("interval_percent"),
+            pl.lit(timestamp).alias("timestamp"),
+        )
+    )
+
+    return df_rids, df_metric
 
 
 def foreign_key_validity(
@@ -148,7 +186,7 @@ def fuzzy_foreign_key_validity(
     n = df1.height
     src1, src2 = sources
 
-    result = pl.DataFrame(
+    result = DataFrame(
         [
             {
                 "source_1": src1,
@@ -200,7 +238,7 @@ def expand_foreign_key_validity(
         df2.select(keys).unique(), on=keys, how="semi", nulls_equal=False
     ).height
 
-    return pl.DataFrame(
+    return DataFrame(
         {
             "source_1": [src1],
             "source_2": [src2],
