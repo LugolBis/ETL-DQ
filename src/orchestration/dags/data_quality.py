@@ -77,6 +77,11 @@ def data_quality_assessment():
         COMPLETUDE_CFG,
         DATA_DIR,
         DfWriter(
+            DQ_DIR / "completude_rids.delta",
+            FileType.DELTA,
+            mode="overwrite",
+        ),
+        DfWriter(
             DQ_DIR / "completude.parquet",
             FileType.PARQUET,
         ),

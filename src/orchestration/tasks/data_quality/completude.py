@@ -11,20 +11,27 @@ from orchestration.tasks.models import DfReader, DfWriter
 
 @task()
 def completude_assessment(
-    cfg: dict[str, list[str]], data_dir: Path, df_w: DfWriter, timestamp: str
+    cfg: dict[str, list[str]],
+    data_dir: Path,
+    df_wrids: DfWriter,
+    df_wmetric: DfWriter,
+    timestamp: str,
 ) -> None:
     timestamp_dt = datetime.fromisoformat(timestamp)
+    dfs_metric = []
 
-    dfs = [
-        compute_completude(
+    for name, columns in cfg.items():
+        df_rids, df_metric = compute_completude(
             DfReader(data_dir / f"{name}.parquet", FileType.PARQUET).read(),
             columns,
             name,
             timestamp_dt,
         )
-        for name, columns in cfg.items()
-    ]
 
-    df_union = pl.concat(dfs, how="vertical")
+        df_wrids.override(
+            delta_write_options={"predicate": f"source = '{name}'"}
+        ).write(df_rids)
 
-    df_w.update(df_union)
+        dfs_metric.append(df_metric)
+
+    df_wmetric.write(pl.concat(dfs_metric, how="vertical"))
