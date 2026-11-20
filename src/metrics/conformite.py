@@ -26,6 +26,15 @@ def _get_df_rids(df_bitmap: DataFrame, columns: list[str], source: str) -> DataF
 def text_format(
     df: DataFrame, columns: list[str], regex: str, source: str, timestamp: datetime
 ) -> tuple[DataFrame, DataFrame]:
+    """
+    Return (`df_rids`, `df_metric`) :
+
+    `df_rids` schema :
+        {'source': str, 'column_name': str, 'row_id': int, 'regex': str}
+
+    `df_metric` schema :
+        {'source': str, 'column_name': str, 'format_percent': float, 'timestamp': datetime}
+    """
     n = df.height
 
     df_bitmap = df.select(
@@ -61,6 +70,15 @@ def label_set(
     source: str,
     timestamp: datetime,
 ) -> tuple[DataFrame, DataFrame]:
+    """
+    Return (`df_rids`, `df_metric`) :
+
+    `df_rids` schema :
+        {'source': str, 'column_name': str, 'row_id': int}
+
+    `df_metric` schema :
+        {'source': str, 'column_name': str, 'labels_percent': float, 'timestamp': datetime}
+    """
     n = df.height
 
     df_bitmap = df.select(
@@ -87,6 +105,19 @@ def label_set(
 def interval_validity(
     df: DataFrame, columns: list[tuple[str, str, str]], source: str, timestamp: datetime
 ) -> tuple[DataFrame, DataFrame]:
+    """
+    Return (`df_rids`, `df_metric`) :
+
+    `df_rids` schema :
+        {'source': str, 'column_name': str, 'row_id': int}
+        where 'column_name' is the triplet of columns names separated by a '|'
+
+    `df_metric` schema :
+        {
+            'source': str, 'column_name_min': str, 'column_target': str,
+            'column_name_max': str, 'interval_percent': float, 'timestamp': datetime
+        }
+    """
     n = df.height
     triple_names = [f"{c0}|{c1}|{c2}" for c0, c1, c2 in columns]
 
