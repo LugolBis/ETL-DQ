@@ -161,6 +161,7 @@ def data_quality_assessment():
     task_unicite = unicite_assessment(
         UNICITE_CFG,
         DATA_DIR,
+        DfWriter(DQ_DIR / "unicite_rids.delta", FileType.DELTA, mode="overwrite"),
         DfWriter(
             DQ_DIR / "unicite.parquet",
             FileType.PARQUET,

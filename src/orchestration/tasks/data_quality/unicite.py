@@ -13,13 +13,17 @@ from orchestration.tasks.models import DfReader, DfWriter
 def unicite_assessment(
     cfg: list[tuple[list[str], list[str]]],
     data_dir: Path,
-    df_w: DfWriter,
+    df_wrids: DfWriter,
+    df_wmetric: DfWriter,
     timestamp: str,
 ) -> None:
     timestamp_dt = datetime.fromisoformat(timestamp)
+    dfs_metric = []
 
-    dfs = [
-        compute_unicite(
+    for names, columns in cfg:
+        source = "+".join(names)
+
+        df_rids, df_metric = compute_unicite(
             pl.concat(
                 [
                     DfReader(
@@ -29,12 +33,14 @@ def unicite_assessment(
                 ],
             ),
             columns,
-            "+".join(names),
+            source,
             timestamp_dt,
         )
-        for names, columns in cfg
-    ]
 
-    df_union = pl.concat(dfs, how="vertical")
+        df_wrids.override(
+            delta_write_options={"predicate": f"source = '{source}'"}
+        ).write(df_rids)
 
-    df_w.update(df_union)
+        dfs_metric.append(df_metric)
+
+    df_wmetric.update(pl.concat(dfs_metric, how="vertical"))
