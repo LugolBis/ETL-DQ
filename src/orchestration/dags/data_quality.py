@@ -109,21 +109,49 @@ def data_quality_assessment():
         ),
         DATA_DIR,
         (
-            DfWriter(
-                DQ_DIR / "conformite_fmt.parquet",
-                FileType.PARQUET,
+            (
+                DfWriter(
+                    DQ_DIR / "conformite_fmt_rids.delta",
+                    FileType.DELTA,
+                    mode="overwrite",
+                ),
+                DfWriter(
+                    DQ_DIR / "conformite_fmt.parquet",
+                    FileType.PARQUET,
+                ),
             ),
-            DfWriter(
-                DQ_DIR / "conformite_label.parquet",
-                FileType.PARQUET,
+            (
+                DfWriter(
+                    DQ_DIR / "conformite_label_rids.delta",
+                    FileType.DELTA,
+                    mode="overwrite",
+                ),
+                DfWriter(
+                    DQ_DIR / "conformite_label.parquet",
+                    FileType.PARQUET,
+                ),
             ),
-            DfWriter(
-                DQ_DIR / "conformite_interval.parquet",
-                FileType.PARQUET,
+            (
+                DfWriter(
+                    DQ_DIR / "conformite_interval_rids.delta",
+                    FileType.DELTA,
+                    mode="overwrite",
+                ),
+                DfWriter(
+                    DQ_DIR / "conformite_interval.parquet",
+                    FileType.PARQUET,
+                ),
             ),
-            DfWriter(
-                DQ_DIR / "conformite_fk.parquet",
-                FileType.PARQUET,
+            (
+                DfWriter(
+                    DQ_DIR / "conformite_fk_rids.delta",
+                    FileType.DELTA,
+                    mode="overwrite",
+                ),
+                DfWriter(
+                    DQ_DIR / "conformite_fk.parquet",
+                    FileType.PARQUET,
+                ),
             ),
         ),
         task_timestamp,  # ty: ignore[invalid-argument-type]
