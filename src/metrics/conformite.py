@@ -10,6 +10,7 @@ from orchestration.tasks.transform.helpers import expand_column, fuzzy_join
 def _get_df_rids(df_bitmap: DataFrame, columns: list[str], source: str) -> DataFrame:
     return (
         df_bitmap.unpivot(
+            index="row_id",
             on=columns,
             variable_name="column_name",
             value_name="is_failed",
@@ -286,7 +287,8 @@ def fuzzy_foreign_key_validity(
         violations_parts.append(
             left_all.join(matched, on="row_id", how="anti").select(
                 "row_id",
-                pl.lit(src1).alias("source"),
+                pl.lit(src1).alias("source_1"),
+                pl.lit(src2).alias("source_2"),
                 pl.lit(pname).alias("column_name"),
             )
         )
@@ -297,7 +299,8 @@ def fuzzy_foreign_key_validity(
         else pl.DataFrame(
             schema={
                 "row_id": pl.Int64,
-                "source": pl.String,
+                "source_1": pl.String,
+                "source_2": pl.String,
                 "column_name": pl.String,
             }
         )
@@ -381,7 +384,7 @@ def expand_foreign_key_validity(
         .join(df_matched, on="row_id", how="anti")
         .select(
             pl.lit(src1).alias("source_1"),
-            pl.lit(src1).alias("source_2"),
+            pl.lit(src2).alias("source_2"),
             "row_id",
             pl.lit(key_label).alias("column_name"),
         )

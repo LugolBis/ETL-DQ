@@ -1,3 +1,4 @@
+from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -141,7 +142,7 @@ def conformite_foreign_key_assessment(
     """
 
     timestamp_dt = datetime.fromisoformat(timestamp)
-    map_dfs_rids = {}
+    map_dfs_rids = defaultdict(list)
     dfs_metric = []
 
     cfg_exact, cfg_fuzzy, cfg_adresse = cfg
@@ -162,9 +163,7 @@ def conformite_foreign_key_assessment(
                 timestamp_dt,
             )
 
-            map_dfs_rids[name_1, name_2] = map_dfs_rids.get(
-                (name_1, name_2), []
-            ).append(df_rids)
+            map_dfs_rids[name_1, name_2].append(df_rids)
 
             dfs_metric.append(df_metric)
 
@@ -185,14 +184,12 @@ def conformite_foreign_key_assessment(
             timestamp_dt,
         )
 
-        map_dfs_rids[name_1, name_2] = map_dfs_rids.get((name_1, name_2), []).append(
-            df_rids
-        )
+        map_dfs_rids[name_1, name_2].append(df_rids)
 
         dfs_metric.append(df_metric)
 
     for (name_1, name_2), dfs_rids in map_dfs_rids.items():
-        df_wmetric.override(
+        df_wrids.override(
             delta_write_options={
                 "predicate": f"source_1 = '{name_1}' and source_2 = '{name_2}'"
             }
