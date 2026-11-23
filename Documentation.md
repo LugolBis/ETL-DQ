@@ -944,69 +944,105 @@ $$
 - Doublons intra-source :
   + Concept :
 
-    On découvre les **dépendances fonctionnelles approximatives** (DFA) `X → A` avec l'algorithme **TANE** : une DFA est une dépendance qui tient sur la quasi-totalité des tuples, avec une erreur $g3 \le \epsilon$. Les tuples qui **violent** une DFA (même `X`, valeurs de `A` différentes) sont des **candidats doublons** à fusionner ou à arbitrer.
+    On découvre les **dépendances fonctionnelles approximatives** (DFA) $X \rightarrow A$ avec l'algorithme **TANE** : une DFA est une dépendance qui tient sur la quasi-totalité des tuples, avec une erreur $g3 \le \epsilon$. Les tuples qui **violent** une DFA (même $X$, valeurs de $A$ différentes) sont des **candidats doublons** à fusionner ou à arbitrer.
 
-    TANE parcourt le treillis des ensembles d'attributs niveau par niveau, s'appuie sur les **partitions** (classes de tuples égaux sur `X`) et élague les candidats redondants.
+    TANE parcourt le treillis des ensembles d'attributs niveau par niveau et élague les candidats redondants (dépendances non minimales, DF exactes).
+
+    La recherche est **guidée par le registre d'erreurs** `E = {row_id: int64, source: varchar, column_name: varchar}`. Dans lequel `column_name` liste 1 à N colonnes testées comme clé sur $R$, qui ne forment pas une clé et présentent des doublons. On note $C$ l'ensemble de ces combinaisons $K$, et $F(K)$ les `row_id` signalés pour $K$. Cette information permet de :
+      1. **Élaguer des sous-arbres du treillis.** Un noeud $X = LHS \cup \{A\}$ n'est généré que s'il existe $K \in C$ tel que $X \subseteq K$. Cette condition est anti-monotone : si elle échoue pour $X$, elle échoue pour tous ses sur-ensembles, donc tout le sous-arbre est coupé. On ne teste ainsi que des quasi-collisions de clé : tuples égaux sur $K \ \{A\}$ mais différents sur $A$.
+      2. **Filtrer les candidats.** Un groupe violant $X \rightarrow A$ n'est retenu que s'il contient au moins une ligne de $F(K)$ pour un $K \supseteq X \cup \{A\}$ : on cherche les quasi-doublons *autour* des doublons déjà connus.
+      3. **Amorcer** les candidats avec les doublons exacts (tuples égaux sur $K$).
+
+    Les candidats sont ensuite fusionnés par composantes connexes, puis une **règle de survie** retient un tuple par cluster.
 
   + Formalisme
 
     ```python
     def g3(R: Relation, X, A) -> float:
         """
-        Minimum proportion of tuples to remove in order for X → A to hold exactly.
+        Minimum proportion of tuples to remove in order for X -> A to hold exactly.
         """
+        R = R.drop_nulls([*X, A])
+        kept = R.group_by([*X, A]).len().group_by(X).max("len").sum()
+        return 1 - kept / len(R)
 
-        classes = R.groupby(list(X))[A]
-        return 1 - classes.agg(lambda s: s.value_counts().iloc[0]).sum() / len(R)
 
+    def tane(R, epsilon, K_set, max_lhs=3):
+        attrs = union(K_set)  # columns containing only the faulty keys
+        fn_eligible = lambda Y: any(Y <= K for K in K_set)  # pruning through errors
 
-    def tane(R: Relation, epsilon: float, max_lhs=3):
-        attrs = set(R.columns)
-        # C+(X) : RHS candidates still useful
-        C = {frozenset(): attrs}
-        level = [frozenset([a]) for a in attrs]
+        C = {frozenset(): attrs}  # C+(X) : RHS again necessary
+        level = [{a} for a in attrs]
         dfa = []
 
         while level and len(level[0]) <= max_lhs + 1:
             for X in level:
-                C[X] = set.intersection(*(C[X - {A}] for A in X))
+                C[X] = intersection(C[X - {A}] for A in X)
 
                 for A in X & C[X]:
                     err = g3(R, X - {A}, A)
 
-                    # X\{A} → A is a valid DFA
-                    if err <= epsilon:
+                    if err <= epsilon:  # X\{A} -> A is a valid DFA
                         dfa.append((X - {A}, A, err))
-
-                        # pruning : minimal dependency
                         C[X].discard(A)
-
                         if err == 0:
-                            # additional pruning for exact FDs
-                            C[X] -= attrs - X
+                            C[X] -= attrs - X  # exact DF exacte : pruning
 
-            # pruning the 'treillis'
-            level = [X for X in level if C[X]]
-            # merge the sets who share a prefix
-            level = next_level(level)
+            level = [X for X in level if C[X]]  # pruning TANE
+            level = next_level(level, fn_eligible)
         return dfa
 
 
-    def DetectDuplicatesDFA(R, epsilon):
-        candidates = []
-
-        for X, A, err in tane(R, epsilon):
-            # DFA not accurate : there is violations
-            if err > 0:
-                for _, groupe in R.groupby(list(X)):
-                    # same X and different A
-                    if groupe[A].nunique() > 1:  # même X, A différent
-                        # group of possible duplicates
-                        candidates.append(groupe)
-
-        # merger/arbitrage (survival rule)
-        return dedupliquer(candidates)
+    def next_level(level, fn_eligible):
+        """
+        Merging sets that share a prefix.
+        """
+        for X, Y in pairs_with_common_prefix(level):
+            Z = X | Y
+            # Z must be in a faulty key and have all its subsets at that level
+            if fn_eligible(Z) and all(Z - {a} in level for a in Z):
+                yield Z
     ```
+
+    ```python
+    def exact_groups(R: Relation, F):
+        """
+        Groups of tuples equal on K, reconstructed from the *values* of K.
+        """
+        for K, rows in F.items():
+            values = R[rows][K].drop_nulls().unique()
+            groups = R.semi_join(values, on=K).group_by(K)
+            yield from (g for g in groups if len(g) > 1)
+
+
+    def DetectDuplicatesDFA(R, E, epsilon, only_flagged=True):
+        K_set, F = parse(E)  # F[K] = row_id reported for K
+        candidates = list(exact_groups(R, F))
+
+        for X, A, err in tane(R, epsilon, K_set):
+            # No violation or empty LHS
+            if err == 0 or not X:
+                continue
+
+            seeds = union(F[K] for K in K_set if X | {A} <= K)
+
+            for _, group in R.group_by(X):
+                # same X, different A and group linked to a known duplicate
+                if group[A].n_unique() > 1 and (not only_flagged or group.row_id & seeds):
+                    candidates.append(group)
+
+        return deduplicate(candidates)
+
+
+    def deduplicate(candidates):
+        # transitive merging of groups that share a tuple (union-find)
+        for cluster in connected_components(candidates):
+            # survival rule : order_by value, then the most complete tuple, then row_id
+            survivor = min(cluster, key=lambda t: (-t[order_by], count_nulls(t), t.row_id))
+            delete(cluster - {survivor})
+    ```
+
+    `only_flagged=False` lève le filtre sur les lignes signalées, mais la fusion transitive peut alors enchaîner des clusters sans rapport.
 
 #### Cohérence
 + Concept :
