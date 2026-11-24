@@ -20,7 +20,7 @@ def compute_unicite(
         {'source': str, 'column_name': str, 'unicite_percent': float, 'timestamp': datetime}
     """
     n = df.height
-    column_label = ", ".join(columns)
+    column_label = ", ".join(sorted(columns))
 
     df_bitmap = df.with_row_index("row_id").select(
         pl.col("row_id").cast(pl.Int64),
