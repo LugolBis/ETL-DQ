@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pendulum
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
@@ -19,6 +17,7 @@ from orchestration.dags.cfg.heterogeneite import (
     HETEROGENEITE_DISPERSION_CFG,
     HETEROGENEITE_RATIO_CFG,
 )
+from orchestration.dags.cfg.mapping_config import MAPPINGS, target_deps
 from orchestration.dags.cfg.unicite import UNICITE_CFG
 from orchestration.tasks.data_quality.coherence import coherence_assessment
 from orchestration.tasks.data_quality.completude import completude_assessment
@@ -34,8 +33,15 @@ from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.load.system import get_timestamp
 from orchestration.tasks.models import DfWriter
 
-DATA_DIR = Path("/opt/airflow/.data")
+DATA_DIR = MAPPINGS.data_dir
 DQ_DIR = DATA_DIR / "data_quality"
+
+# Global relations whose transformation DAG is a dependency of the assessment
+ASSESSED_RELATIONS = (
+    "Consommation_CSP",
+    "Consommation_IRIS_Evry",
+    "Consommation_IRIS_Paris",
+)
 
 
 @dag(
@@ -57,20 +63,7 @@ def data_quality_assessment():
 
     # We use transitives dependencies to cover all of the dependencies
     # with a min `sources_deps`
-    sources_deps = (
-        (
-            "consommation_csp",
-            [DATA_DIR / "Consommation_CSP.parquet"],
-        ),
-        (
-            "consommation_iris_evry",
-            [DATA_DIR / "Consommation_IRIS_Evry.parquet"],
-        ),
-        (
-            "consommation_iris_paris",
-            [DATA_DIR / "Consommation_IRIS_Paris.parquet"],
-        ),
-    )
+    sources_deps = target_deps(ASSESSED_RELATIONS)
 
     # 1. Completude
     task_completude = completude_assessment(

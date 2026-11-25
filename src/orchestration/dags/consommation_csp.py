@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from pathlib import Path
 
 import pendulum
 import polars as pl
@@ -7,27 +6,24 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 from polars import DataFrame
 
+from mappings import LinkKind
+from orchestration.dags.cfg.mapping_config import MAPPINGS, extract_deps
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.load.system import display
 from orchestration.tasks.models import DfReader, DfWriter
 from orchestration.tasks.transform.core import apply_dfs
-from orchestration.tasks.transform.helpers import (
-    ADRESSE_EXTRACTIONS,
-    expand_column,
-    fuzzy_join,
+from orchestration.tasks.transform.helpers import expand_column, fuzzy_join
+from orchestration.tasks.transform.mapping_helpers import (
+    aggregation_sql,
+    link_dtypes,
+    link_extractions,
 )
 
-DATA_DIR = Path("/opt/airflow/.data")
+TARGET = "Consommation_CSP"
 
-SQL_QUERY_STATS = """
-    SELECT 
-        ID_CSP,
-        Salaire_Moyen,
-        AVG(NB_KW_Jour * 365) AS Conso_moyenne_annuelle
-    FROM self
-    GROUP BY ID_CSP, Salaire_Moyen;
-"""
+# GROUP BY keys and AVG(NB_KW_Jour * 365) come from the views of the mappings
+SQL_QUERY_STATS = aggregation_sql(MAPPINGS, TARGET)
 
 
 @dag(
@@ -40,53 +36,52 @@ def consommation_csp():
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    sources_deps = (
-        (
-            "extract_source1",
-            [
-                DATA_DIR / "population1.parquet",
-                DATA_DIR / "consommation1.parquet",
-            ],
-        ),
-        (
-            "extract_source2",
-            [
-                DATA_DIR / "population2.parquet",
-                DATA_DIR / "consommation2.parquet",
-            ],
-        ),
-        ("extract_source3", [DATA_DIR / "csp3.parquet"]),
-    )
+    # (extract dag_id, staged files) for every source feeding the target
+    sources_deps = extract_deps(TARGET)
+
+    # Joins between the staged sources, as declared in the mappings
+    pop1_conso1 = MAPPINGS.link(
+        "pop1_conso1", LinkKind.EXTRACTS
+    )  # Adresse -> N, Nom_Rue
+    csp3_pop1 = MAPPINGS.link("csp3_pop1", LinkKind.CONTAINS)  # Desc contains CSP
+    pop2_conso2 = MAPPINGS.link(
+        "pop2_conso2", LinkKind.EXTRACTS
+    )  # Adresse -> N, Nom_Rue, Code_Postal
+    csp3_pop2 = MAPPINGS.link("csp3_pop2", LinkKind.EQUALS)  # ID_CSP = CSP
 
     # TODO: If it break : improve the 'rue' replacement to support other voie type such as 'boulevard', etc.
     fn_join_pop_conso1: Callable[[DataFrame, DataFrame], DataFrame] = (
         lambda df_pop, df_conso: expand_column(
             df_pop,
-            "Adresse",
-            ADRESSE_EXTRACTIONS[:-1],
+            pop1_conso1.left.columns[0],
+            link_extractions(pop1_conso1),
             [(r"^Paris,\s*", "Paris, 75000, "), ("(?i)rue", "")],
-            dtypes={"N": pl.Int64},
-        ).join(df_conso, on=["N", "Nom_Rue"], how="inner")
+            dtypes=link_dtypes(MAPPINGS, pop1_conso1),
+        ).join(df_conso, on=list(pop1_conso1.right.columns), how="inner")
     )
 
     fn_join_pop_conso2: Callable[[DataFrame, DataFrame], DataFrame] = (
         lambda df_pop, df_conso: expand_column(
             df_pop,
-            "Adresse",
-            ADRESSE_EXTRACTIONS,
-            dtypes={"N": pl.Int64},
-        ).join(df_conso, on=["N", "Nom_Rue", "Code_Postal"], how="inner")
+            pop2_conso2.left.columns[0],
+            link_extractions(pop2_conso2),
+            dtypes=link_dtypes(MAPPINGS, pop2_conso2),
+        ).join(df_conso, on=list(pop2_conso2.right.columns), how="inner")
     )
 
+    # Tags of Source1_Population.CSP (right) must appear in Source3_CSP.Desc (left)
     fn_join_pop_csp1: Callable[[DataFrame, DataFrame], DataFrame] = (
-        lambda df_pop, df_csp: fuzzy_join(df_pop, df_csp, "CSP", "Desc").select(
-            ["ID_CSP", "Salaire_Moyen", "NB_KW_Jour"]
-        )
+        lambda df_pop, df_csp: fuzzy_join(
+            df_pop, df_csp, csp3_pop1.right.columns[0], csp3_pop1.left.columns[0]
+        ).select(["ID_CSP", "Salaire_Moyen", "NB_KW_Jour"])
     )
 
     fn_join_pop_csp2: Callable[[DataFrame, DataFrame], DataFrame] = (
         lambda df_pop, df_csp: df_pop.join(
-            df_csp, left_on="CSP", right_on="ID_CSP", how="inner"
+            df_csp,
+            left_on=list(csp3_pop2.right.columns),
+            right_on=list(csp3_pop2.left.columns),
+            how="inner",
         ).select(
             pl.col("CSP").alias("ID_CSP"), pl.col("Salaire_Moyen"), pl.col("NB_KW_Jour")
         )
@@ -110,12 +105,10 @@ def consommation_csp():
     task_transform = apply_dfs.override(task_id="Transform_sources")(
         *df_readers,
         func=fn_merged_flows,
-        df_w=DfWriter(DATA_DIR / "Consommation_CSP.parquet", FileType.PARQUET),
+        df_w=DfWriter(MAPPINGS.global_path(TARGET), FileType.PARQUET),
     )
 
-    task_display = display(
-        DfReader(DATA_DIR / "Consommation_CSP.parquet", FileType.PARQUET), 15
-    )
+    task_display = display(DfReader(MAPPINGS.global_path(TARGET), FileType.PARQUET), 15)
 
     # Tasks chaining - HITL
     for source_id, file_paths in sources_deps:

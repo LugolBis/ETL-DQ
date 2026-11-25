@@ -1,0 +1,511 @@
+{
+  "data_dir": "/opt/airflow/.data",
+  "global_schema": [
+    {
+      "name": "Consommation_CSP",
+      "attributes": [
+        {
+          "name": "ID_CSP",
+          "dtype": "BIGINT",
+          "description": "Identifiant de la catégorie socioprofessionnelle"
+        },
+        {
+          "name": "Salaire_Moyen",
+          "dtype": "BIGINT",
+          "description": "Salaire moyen associé à la catégorie"
+        },
+        {
+          "name": "Conso_moyenne_annuelle",
+          "dtype": "DOUBLE",
+          "description": "Consommation annuelle moyenne"
+        }
+      ],
+      "description": "Données de consommation énergétique agrégées par catégorie socioprofessionnelle (CSP) et niveau de salaire."
+    },
+    {
+      "name": "Consommation_IRIS_Paris",
+      "attributes": [
+        {
+          "name": "ID_Iris",
+          "dtype": "VARCHAR",
+          "description": "Identifiant de la zone géographique IRIS"
+        },
+        {
+          "name": "Conso_moyenne_annuelle",
+          "dtype": "DOUBLE",
+          "description": "Consommation annuelle moyenne"
+        }
+      ],
+      "description": "Données de consommation énergétique agrégées par zone géographique IRIS à Paris."
+    },
+    {
+      "name": "Consommation_IRIS_Evry",
+      "attributes": [
+        {
+          "name": "ID_Iris",
+          "dtype": "VARCHAR",
+          "description": "Identifiant de la zone géographique IRIS"
+        },
+        {
+          "name": "Conso_moyenne_annuelle",
+          "dtype": "DOUBLE",
+          "description": "Consommation annuelle moyenne"
+        }
+      ],
+      "description": "Données de consommation énergétique agrégées par zone géographique IRIS à Évry."
+    }
+  ],
+  "sources": [
+    {
+      "name": "Source1_Population",
+      "source": "source1",
+      "raw": {
+        "path": "Source1_Population.csv",
+        "format": "csv",
+        "options": {
+          "has_header": true
+        }
+      },
+      "columns": [
+        {
+          "name": "Adresse",
+          "dtype": "VARCHAR",
+          "description": "Adresse complète, parsée en N / Nom_Rue"
+        },
+        {
+          "name": "CSP",
+          "dtype": "VARCHAR",
+          "description": "Libellé de la CSP (tags séparés par '/')"
+        }
+      ]
+    },
+    {
+      "name": "Source1_Consommation",
+      "source": "source1",
+      "raw": {
+        "path": "Source1_Consommation.csv",
+        "format": "csv",
+        "options": {
+          "has_header": true
+        }
+      },
+      "columns": [
+        {
+          "name": "N",
+          "dtype": "BIGINT"
+        },
+        {
+          "name": "Nom_Rue",
+          "dtype": "VARCHAR"
+        },
+        {
+          "name": "Code_Postal",
+          "dtype": "BIGINT"
+        },
+        {
+          "name": "NB_KW_Jour",
+          "dtype": "DOUBLE"
+        }
+      ]
+    },
+    {
+      "name": "Source2_Population",
+      "source": "source2",
+      "raw": {
+        "path": "Source2_Population.csv",
+        "format": "csv",
+        "options": {
+          "has_header": true
+        }
+      },
+      "columns": [
+        {
+          "name": "Adresse",
+          "dtype": "VARCHAR",
+          "description": "Adresse complète, parsée en N / Nom_Rue / Code_Postal"
+        },
+        {
+          "name": "CSP",
+          "dtype": "BIGINT",
+          "description": "Identifiant de la CSP"
+        }
+      ]
+    },
+    {
+      "name": "Source2_Consommation",
+      "source": "source2",
+      "raw": {
+        "path": "Source2_Consommation.csv",
+        "format": "csv",
+        "options": {
+          "has_header": true
+        }
+      },
+      "columns": [
+        {
+          "name": "N",
+          "dtype": "BIGINT"
+        },
+        {
+          "name": "Nom_Rue",
+          "dtype": "VARCHAR"
+        },
+        {
+          "name": "Code_Postal",
+          "dtype": "VARCHAR"
+        },
+        {
+          "name": "NB_KW_Jour",
+          "dtype": "DOUBLE"
+        }
+      ]
+    },
+    {
+      "name": "Source3_CSP",
+      "source": "source3",
+      "raw": {
+        "path": "Source3_CSP.csv",
+        "format": "csv",
+        "options": {
+          "has_header": true
+        }
+      },
+      "columns": [
+        {
+          "name": "ID_CSP",
+          "dtype": "BIGINT"
+        },
+        {
+          "name": "Desc",
+          "dtype": "VARCHAR",
+          "description": "Libellé de la CSP"
+        },
+        {
+          "name": "Salaire_Min",
+          "dtype": "BIGINT",
+          "cast": true,
+          "cleanup": [
+            [
+              " ",
+              ""
+            ]
+          ]
+        },
+        {
+          "name": "Salaire_Max",
+          "dtype": "BIGINT",
+          "cast": true,
+          "cleanup": [
+            [
+              " ",
+              ""
+            ]
+          ]
+        },
+        {
+          "name": "Salaire_Moyen",
+          "dtype": "BIGINT"
+        }
+      ]
+    },
+    {
+      "name": "Source4_IRIS",
+      "source": "source4",
+      "raw": {
+        "path": "Source4_IRIS.csv",
+        "format": "csv",
+        "options": {
+          "has_header": true
+        }
+      },
+      "columns": [
+        {
+          "name": "ID_Iris",
+          "dtype": "VARCHAR",
+          "source": "ID_IRIS"
+        },
+        {
+          "name": "ID_Rue",
+          "dtype": "VARCHAR"
+        },
+        {
+          "name": "ID_Ville",
+          "dtype": "VARCHAR"
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "source": "Source1_Population",
+      "containment": "sound",
+      "queries": [
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_CSP"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "Source1_Consommation",
+      "containment": "sound",
+      "queries": [
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_CSP",
+              "terms": {
+                "Conso_moyenne_annuelle": {
+                  "derived": {
+                    "inputs": [
+                      "NB_KW_Jour"
+                    ],
+                    "expression": "NB_KW_Jour * 365",
+                    "aggregate": "avg"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_IRIS_Paris",
+              "terms": {
+                "Conso_moyenne_annuelle": {
+                  "derived": {
+                    "inputs": [
+                      "NB_KW_Jour"
+                    ],
+                    "expression": "NB_KW_Jour * 365",
+                    "aggregate": "avg"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "Source2_Population",
+      "containment": "sound",
+      "queries": [
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_CSP",
+              "terms": {
+                "ID_CSP": "CSP"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "Source2_Consommation",
+      "containment": "sound",
+      "queries": [
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_CSP",
+              "terms": {
+                "Conso_moyenne_annuelle": {
+                  "derived": {
+                    "inputs": [
+                      "NB_KW_Jour"
+                    ],
+                    "expression": "NB_KW_Jour * 365",
+                    "aggregate": "avg"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_IRIS_Evry",
+              "terms": {
+                "Conso_moyenne_annuelle": {
+                  "derived": {
+                    "inputs": [
+                      "NB_KW_Jour"
+                    ],
+                    "expression": "NB_KW_Jour * 365",
+                    "aggregate": "avg"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "Source3_CSP",
+      "containment": "sound",
+      "queries": [
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_CSP",
+              "terms": {
+                "ID_CSP": "ID_CSP",
+                "Salaire_Moyen": "Salaire_Moyen"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "Source4_IRIS",
+      "containment": "sound",
+      "queries": [
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_IRIS_Paris",
+              "terms": {
+                "ID_Iris": "ID_Iris"
+              }
+            }
+          ],
+          "conditions": [
+            {
+              "column": "ID_Ville",
+              "op": "=",
+              "value": "Paris"
+            }
+          ]
+        },
+        {
+          "atoms": [
+            {
+              "relation": "Consommation_IRIS_Evry",
+              "terms": {
+                "ID_Iris": "ID_Iris"
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Côté Évry, la jointure actuelle ne porte que sur le nom de rue : aucune condition sur ID_Ville n'est exprimée."
+    }
+  ],
+  "links": [
+    {
+      "name": "pop1_conso1",
+      "left": {
+        "relation": "Source1_Population",
+        "columns": [
+          "Adresse"
+        ]
+      },
+      "right": {
+        "relation": "Source1_Consommation",
+        "columns": [
+          "N",
+          "Nom_Rue"
+        ]
+      },
+      "kind": "extracts",
+      "description": "N et Nom_Rue sont extraits de l'adresse (le code postal n'intervient pas)."
+    },
+    {
+      "name": "csp3_pop1",
+      "left": {
+        "relation": "Source3_CSP",
+        "columns": [
+          "Desc"
+        ]
+      },
+      "right": {
+        "relation": "Source1_Population",
+        "columns": [
+          "CSP"
+        ]
+      },
+      "kind": "contains",
+      "description": "Chaque tag de CSP (séparés par '/') doit figurer dans Desc, sans tenir compte de la casse."
+    },
+    {
+      "name": "pop2_conso2",
+      "left": {
+        "relation": "Source2_Population",
+        "columns": [
+          "Adresse"
+        ]
+      },
+      "right": {
+        "relation": "Source2_Consommation",
+        "columns": [
+          "N",
+          "Nom_Rue",
+          "Code_Postal"
+        ]
+      },
+      "kind": "extracts"
+    },
+    {
+      "name": "csp3_pop2",
+      "left": {
+        "relation": "Source3_CSP",
+        "columns": [
+          "ID_CSP"
+        ]
+      },
+      "right": {
+        "relation": "Source2_Population",
+        "columns": [
+          "CSP"
+        ]
+      },
+      "kind": "equals"
+    },
+    {
+      "name": "conso1_iris4",
+      "left": {
+        "relation": "Source1_Consommation",
+        "columns": [
+          "Nom_Rue",
+          "Code_Postal"
+        ]
+      },
+      "right": {
+        "relation": "Source4_IRIS",
+        "columns": [
+          "ID_Rue",
+          "ID_Ville"
+        ]
+      },
+      "kind": "equals",
+      "description": "Un Code_Postal entre 75000 et 75999 est ramené à 'Paris' avant la comparaison."
+    },
+    {
+      "name": "conso2_iris4",
+      "left": {
+        "relation": "Source2_Consommation",
+        "columns": [
+          "Nom_Rue"
+        ]
+      },
+      "right": {
+        "relation": "Source4_IRIS",
+        "columns": [
+          "ID_Rue"
+        ]
+      },
+      "kind": "contains",
+      "description": "Chaque tag de ID_Rue (séparés par '/') doit figurer dans Nom_Rue, sans tenir compte de la casse."
+    }
+  ]
+}

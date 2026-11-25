@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from pathlib import Path
 
 import pendulum
 import polars as pl
@@ -7,21 +6,19 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 from polars import DataFrame
 
+from mappings import LinkKind
+from orchestration.dags.cfg.mapping_config import MAPPINGS, extract_deps
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.load.system import display
 from orchestration.tasks.models import DfReader, DfWriter
 from orchestration.tasks.transform.core import apply_dfs
+from orchestration.tasks.transform.mapping_helpers import aggregation_sql
 
-DATA_DIR = Path("/opt/airflow/.data")
+TARGET = "Consommation_IRIS_Paris"
 
-SQL_QUERY_STATS = """
-    SELECT 
-        ID_Iris,
-        AVG(NB_KW_Jour * 365) AS Conso_moyenne_annuelle
-    FROM self
-    GROUP BY ID_Iris;
-"""
+# GROUP BY keys and AVG(NB_KW_Jour * 365) come from the views of the mappings
+SQL_QUERY_STATS = aggregation_sql(MAPPINGS, TARGET)
 
 
 @dag(
@@ -34,10 +31,11 @@ def consommation_iris_paris():
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    sources_deps = (
-        ("extract_source1", [DATA_DIR / "consommation1.parquet"]),
-        ("extract_source4", [DATA_DIR / "iris4.parquet"]),
-    )
+    # (extract dag_id, staged files) for every source feeding the target
+    sources_deps = extract_deps(TARGET)
+
+    # (Nom_Rue, Code_Postal) of the consumption = (ID_Rue, ID_Ville) of the IRIS
+    conso1_iris4 = MAPPINGS.link("conso1_iris4", LinkKind.EQUALS)
 
     df_readers = [
         DfReader(path, FileType.PARQUET) for _, paths in sources_deps for path in paths
@@ -54,8 +52,8 @@ def consommation_iris_paris():
         )
         .join(
             df_b,
-            left_on=["Nom_Rue", "Code_Postal"],
-            right_on=["ID_Rue", "ID_Ville"],
+            left_on=list(conso1_iris4.left.columns),
+            right_on=list(conso1_iris4.right.columns),
             how="inner",
         )
         .sql(SQL_QUERY_STATS)
@@ -64,12 +62,10 @@ def consommation_iris_paris():
     task_transform = apply_dfs.override(task_id="Join_and_Agg_ops")(
         *df_readers,
         func=fn_transform,
-        df_w=DfWriter(DATA_DIR / "Consommation_IRIS_Paris.parquet", FileType.PARQUET),
+        df_w=DfWriter(MAPPINGS.global_path(TARGET), FileType.PARQUET),
     )
 
-    task_display = display(
-        DfReader(DATA_DIR / "Consommation_IRIS_Paris.parquet", FileType.PARQUET), 15
-    )
+    task_display = display(DfReader(MAPPINGS.global_path(TARGET), FileType.PARQUET), 15)
 
     # Tasks chaining - HITL
     for source_id, file_paths in sources_deps:

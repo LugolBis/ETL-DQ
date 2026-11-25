@@ -1,25 +1,21 @@
-from pathlib import Path
-
 import pendulum
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 
+from mappings import LinkKind
+from orchestration.dags.cfg.mapping_config import MAPPINGS, extract_deps
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.extract.system import ensure_extracted
 from orchestration.tasks.load.system import display
 from orchestration.tasks.models import DfReader, DfWriter
 from orchestration.tasks.transform.core import apply_dfs
 from orchestration.tasks.transform.helpers import fuzzy_join
+from orchestration.tasks.transform.mapping_helpers import aggregation_sql
 
-DATA_DIR = Path("/opt/airflow/.data")
+TARGET = "Consommation_IRIS_Evry"
 
-SQL_QUERY_STATS = """
-    SELECT 
-        ID_Iris,
-        AVG(NB_KW_Jour * 365) AS Conso_moyenne_annuelle
-    FROM self
-    GROUP BY ID_Iris;
-"""
+# GROUP BY keys and AVG(NB_KW_Jour * 365) come from the views of the mappings
+SQL_QUERY_STATS = aggregation_sql(MAPPINGS, TARGET)
 
 
 @dag(
@@ -32,10 +28,11 @@ def consommation_iris_evry():
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    sources_deps = (
-        ("extract_source2", [DATA_DIR / "consommation2.parquet"]),
-        ("extract_source4", [DATA_DIR / "iris4.parquet"]),
-    )
+    # (extract dag_id, staged files) for every source feeding the target
+    sources_deps = extract_deps(TARGET)
+
+    # Nom_Rue of the consumption (left) contains the tags of ID_Rue of the IRIS (right)
+    conso2_iris4 = MAPPINGS.link("conso2_iris4", LinkKind.CONTAINS)
 
     df_readers = [
         DfReader(path, FileType.PARQUET) for _, paths in sources_deps for path in paths
@@ -46,17 +43,15 @@ def consommation_iris_evry():
         func=lambda df_a, df_b: fuzzy_join(
             df_a,
             df_b,
-            "Nom_Rue",
-            "ID_Rue",
+            conso2_iris4.left.columns[0],
+            conso2_iris4.right.columns[0],
             "column_2",
             "inner",
         ).sql(SQL_QUERY_STATS),
-        df_w=DfWriter(DATA_DIR / "Consommation_IRIS_Evry.parquet", FileType.PARQUET),
+        df_w=DfWriter(MAPPINGS.global_path(TARGET), FileType.PARQUET),
     )
 
-    task_display = display(
-        DfReader(DATA_DIR / "Consommation_IRIS_Evry.parquet", FileType.PARQUET), 15
-    )
+    task_display = display(DfReader(MAPPINGS.global_path(TARGET), FileType.PARQUET), 15)
 
     # Tasks chaining - HITL
     for source_id, file_paths in sources_deps:
