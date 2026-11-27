@@ -1,4 +1,3 @@
-
 # Configuration des metriques d'heterogeneite
 #
 # Les sources correspondent aux fichiers Parquet presents
@@ -13,8 +12,8 @@
 # Le CV sera calcule pour chaque colonne indiquee.
 
 HETEROGENEITE_CV_CFG = {
-    "consommation1": ["NB_KW_Jour"],
-    "consommation2": ["NB_KW_Jour"],
+    "Source1_Consommation": ["NB_KW_Jour"],
+    "Source2_Consommation": ["NB_KW_Jour"],
 }
 
 
@@ -33,9 +32,9 @@ HETEROGENEITE_CV_CFG = {
 
 HETEROGENEITE_DISPERSION_CFG = [
     (
-        "consommation1",
+        "Source1_Consommation",
         "NB_KW_Jour",
-        "consommation2",
+        "Source2_Consommation",
         "NB_KW_Jour",
     ),
 ]
@@ -57,7 +56,7 @@ HETEROGENEITE_DISPERSION_CFG = [
 # Les seuils sont configurables.
 
 HETEROGENEITE_RATIO_CFG = {
-    "csp3": [
+    "Source3_CSP_stage": [
         (
             "Salaire_Min",
             "Salaire_Moyen",

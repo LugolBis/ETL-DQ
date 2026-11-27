@@ -1,9 +1,9 @@
 UNICITE_CFG = [
-    (["population1"], ["Nom", "Prénom"]),
-    (["population2"], ["Nom", "Prénom"]),
-    (["consommation1"], ["N", "Nom_Rue", "Code_Postal"]),
-    (["consommation2"], ["N", "Nom_Rue", "Code_Postal"]),
-    (["csp3"], ["Salaire_Moyen"]),
-    (["csp3"], ["Salaire_Min", "Salaire_Max"]),
-    (["population1", "population2"], ["Nom", "Prénom"]),
+    (["Source1_Population_stage"], ["Nom", "Prénom"]),
+    (["Source2_Population_stage"], ["Nom", "Prénom"]),
+    (["Source1_Consommation_stage"], ["N", "Nom_Rue", "Code_Postal"]),
+    (["Source2_Consommation_stage"], ["N", "Nom_Rue", "Code_Postal"]),
+    (["Source3_CSP_stage"], ["Salaire_Moyen"]),
+    (["Source3_CSP_stage"], ["Salaire_Min", "Salaire_Max"]),
+    (["Source1_Population_stage", "Source2_Population_stage"], ["Nom", "Prénom"]),
 ]

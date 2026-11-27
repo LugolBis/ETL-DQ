@@ -6,6 +6,7 @@ extraction rules from here instead of hard-coding them.
 """
 
 import os
+from collections.abc import Iterable
 from pathlib import Path
 
 from mappings import MappingSet
@@ -30,4 +31,21 @@ def extract_deps(global_relation: str) -> tuple[tuple[str, list[Path]], ...]:
     return tuple(
         (extract_dag_id(source_id), list(paths))
         for source_id, paths in MAPPINGS.dependencies(global_relation).items()
+    )
+
+
+def transform_dag_id(global_relation: str) -> str:
+    """dag_id of the DAG building a global relation: 'Consommation_CSP' -> 'consommation_csp'."""
+    MAPPINGS.global_relation(global_relation)  # fail early on an unknown relation
+    return global_relation.lower()
+
+
+def target_deps(global_relations: Iterable[str]) -> tuple[tuple[str, list[Path]], ...]:
+    """Like `extract_deps`, but for the global relations themselves.
+
+    ((transformation dag_id, [global file]), ...), in the order given.
+    """
+    return tuple(
+        (transform_dag_id(name), [MAPPINGS.global_path(name)])
+        for name in global_relations
     )
