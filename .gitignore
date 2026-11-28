@@ -3,6 +3,7 @@
 airflow/
 .airflow/
 .superset_home
+*.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
