@@ -34,4 +34,4 @@ def completude_assessment(
 
         dfs_metric.append(df_metric)
 
-    df_wmetric.write(pl.concat(dfs_metric, how="vertical"))
+    df_wmetric.update(pl.concat(dfs_metric, how="vertical"))
