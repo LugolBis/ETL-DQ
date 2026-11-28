@@ -338,7 +338,7 @@ def choisir_facteur_rp(
     # Etape 2 : recuperer les salaires de ces lignes
     donnees = (
         df.with_row_index("row_id")
-        .filter(pl.col("row_id").is_in(atypiques["row_id"]))
+        .filter(pl.col("row_id").is_in(atypiques["row_id"].to_list()))
         .select(["Salaire_Min", "Salaire_Moyen", "Salaire_Max"])
         .with_columns(
             [
