@@ -5,10 +5,13 @@ import pendulum
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 
+from orchestration.dags.cfg.remediation.completude import COMPLETUDE_REM_CFG
 from orchestration.dags.cfg.remediation.unicite import UNICITE_RAW_CFG
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.load.helpers import SEPARATOR
 from orchestration.tasks.models import DfReader, DfWriter
+
+from orchestration.tasks.remediation.completude import completude_remediation
 
 from orchestration.tasks.remediation.unicite import (
     UNICITE_REM_INPUT,
@@ -71,6 +74,13 @@ def data_quality_remediation():
     ]
 
     task_unicite = unicite_remediation(cfg_unicite, DATA_DIR)
+
+    # ========================================================
+    # REMEDIATION DE LA COMPLETUDE (MICE)
+    # En dernier, cf. orchestration de la documentation
+    # ========================================================
+
+    task_completude = completude_remediation(COMPLETUDE_REM_CFG, DATA_DIR)
 
     # ========================================================
     # 2. REMEDIATION DE L'HETEROGENEITE
@@ -157,7 +167,7 @@ def data_quality_remediation():
     # 3. ENCHAINEMENT DES TACHES
     # ========================================================
 
-    start >> task_unicite >> end
+    start >> task_unicite >> task_completude >> end
     start >> task_heterogeneite >> end
 
 
