@@ -1,9 +1,11 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 import polars as pl
 from airflow.sdk import task
 
+from orchestration.tasks.load.helpers import lazy_union_dyn
 from orchestration.tasks.models import DfReader, DfWriter
 from remediation.unicite import deduplicate
 
@@ -24,12 +26,12 @@ type UNICITE_REM_INPUT = Sequence[
 
 
 @task()
-def unicite_remediation(
-    cfg: UNICITE_REM_INPUT,
-) -> None:
+def unicite_remediation(cfg: UNICITE_REM_INPUT, data_dir: Path) -> None:
     for df_rs, df_rerr, df_w, source, dedup_cfg in cfg:
+        df_r_union = lazy_union_dyn(list(df_rs), data_dir)
+
         dedup_res = deduplicate(
-            pl.concat((df_r.read() for df_r in df_rs), how="vertical"),
+            pl.concat((df_r.read() for df_r in df_r_union), how="vertical"),
             df_rerr.read(),
             source,
             **vars(dedup_cfg),

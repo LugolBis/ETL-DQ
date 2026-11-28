@@ -6,6 +6,7 @@ from airflow.sdk import dag
 
 from orchestration.dags.cfg.remediation.unicite import UNICITE_RAW_CFG
 from orchestration.tasks.enums import FileType
+from orchestration.tasks.load.helpers import SEPARATOR
 from orchestration.tasks.models import DfReader, DfWriter
 from orchestration.tasks.remediation.unicite import (
     UNICITE_REM_INPUT,
@@ -39,14 +40,16 @@ def data_quality_remediation():
                 for source in sources
             ],
             DfReader(DQ_DIR / f"{source_err}.delta", FileType.DELTA),
-            DfWriter(DQ_REM_DIR / f"{'_'.join(sources)}_rem.delta", FileType.DELTA),
+            DfWriter(
+                DQ_REM_DIR / f"{SEPARATOR.join(sources)}.parquet", FileType.PARQUET
+            ),
             "+".join(sources),
             dedup_cfg,
         )
         for (sources, source_err, dedup_cfg) in UNICITE_RAW_CFG
     ]
 
-    task_unicite = unicite_remediation(cfg_unicite)
+    task_unicite = unicite_remediation(cfg_unicite, DATA_DIR)
 
     # Task chaining
     start >> task_unicite >> end
