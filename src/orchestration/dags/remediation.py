@@ -15,7 +15,6 @@ from orchestration.tasks.remediation.unicite import (
 
 DATA_DIR = Path("/opt/airflow/.data")
 DQ_DIR = DATA_DIR / "data_quality"
-DQ_REM_DIR = DQ_DIR / "remediation"
 
 
 @dag(
@@ -40,13 +39,12 @@ def data_quality_remediation():
                 for source in sources
             ],
             DfReader(DQ_DIR / f"{source_err}.delta", FileType.DELTA),
-            DfWriter(
-                DQ_REM_DIR / f"{SEPARATOR.join(sources)}.parquet", FileType.PARQUET
-            ),
+            DfWriter(DATA_DIR / f"{SEPARATOR.join(sources)}.parquet", FileType.PARQUET),
             "+".join(sources),
             dedup_cfg,
+            funcs,
         )
-        for (sources, source_err, dedup_cfg) in UNICITE_RAW_CFG
+        for (sources, source_err, dedup_cfg, funcs) in UNICITE_RAW_CFG
     ]
 
     task_unicite = unicite_remediation(cfg_unicite, DATA_DIR)

@@ -1,11 +1,11 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-import polars as pl
 from airflow.sdk import task
+from polars import DataFrame
 
-from orchestration.tasks.load.helpers import lazy_union_dyn
+from orchestration.tasks.load.helpers import union_dyn
 from orchestration.tasks.models import DfReader, DfWriter
 from remediation.unicite import deduplicate
 
@@ -21,17 +21,32 @@ class DeduplicationCfg:
 
 
 type UNICITE_REM_INPUT = Sequence[
-    tuple[Sequence[DfReader], DfReader, DfWriter, str, DeduplicationCfg]
+    tuple[
+        Sequence[DfReader],
+        DfReader,
+        DfWriter,
+        str,
+        DeduplicationCfg,
+        list[Callable[[DataFrame], DataFrame] | None],
+    ]
 ]
 
 
 @task()
 def unicite_remediation(cfg: UNICITE_REM_INPUT, data_dir: Path) -> None:
-    for df_rs, df_rerr, df_w, source, dedup_cfg in cfg:
-        df_r_union = lazy_union_dyn(list(df_rs), data_dir)
+    for df_rs, df_rerr, df_w, source, dedup_cfg, funcs in cfg:
+        sources = []
+        for index, fn in enumerate(funcs):
+            df_r = df_rs[index]
+            src_name = df_r.path.stem
+
+            if fn:
+                sources.append((fn(df_r.read()), src_name))
+            else:
+                sources.append((df_r.read(), src_name))
 
         dedup_res = deduplicate(
-            pl.concat((df_r.read() for df_r in df_r_union), how="vertical"),
+            union_dyn(sources, data_dir),
             df_rerr.read(),
             source,
             **vars(dedup_cfg),
