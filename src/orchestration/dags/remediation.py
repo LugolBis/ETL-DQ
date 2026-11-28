@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import pendulum
@@ -10,18 +9,14 @@ from orchestration.dags.cfg.remediation.unicite import UNICITE_RAW_CFG
 from orchestration.tasks.enums import FileType
 from orchestration.tasks.load.helpers import SEPARATOR
 from orchestration.tasks.models import DfReader, DfWriter
-
 from orchestration.tasks.remediation.completude import completude_remediation
-
+from orchestration.tasks.remediation.heterogeneite import (
+    heterogeneite_remediation,
+)
 from orchestration.tasks.remediation.unicite import (
     UNICITE_REM_INPUT,
     unicite_remediation,
 )
-
-from orchestration.tasks.remediation.heterogeneite import (
-    heterogeneite_remediation,
-)
-
 
 DATA_DIR = Path("/opt/airflow/.data")
 DQ_DIR = DATA_DIR / "data_quality"
@@ -40,14 +35,8 @@ DQ_REM_DIR = DQ_DIR / "remediation"
     ],
 )
 def data_quality_remediation():
-
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
-
-    # ========================================================
-    # 1. REMEDIATION DE L'UNICITE
-    # Derniere version du code de l'equipe
-    # ========================================================
 
     cfg_unicite: UNICITE_REM_INPUT = [
         (
@@ -75,100 +64,48 @@ def data_quality_remediation():
 
     task_unicite = unicite_remediation(cfg_unicite, DATA_DIR)
 
-    # ========================================================
-    # REMEDIATION DE LA COMPLETUDE (MICE)
-    # En dernier, cf. orchestration de la documentation
-    # ========================================================
-
     task_completude = completude_remediation(COMPLETUDE_REM_CFG, DATA_DIR)
 
-    # ========================================================
-    # 2. REMEDIATION DE L'HETEROGENEITE
-    # Dispersion + ratio de position
-    # ========================================================
-
     task_heterogeneite = heterogeneite_remediation(
-
-        # ====================================================
-        # PARTIE A : DIFFERENCE DE DISPERSION
-        # ====================================================
-
         cfg_dispersion=[
             (
-                # Source 1 : consommation Paris
                 DfReader(
                     DATA_DIR / "consommation1.parquet",
                     FileType.PARQUET,
                 ),
-
-                # Source 2 : consommation Evry
                 DfReader(
                     DATA_DIR / "consommation2.parquet",
                     FileType.PARQUET,
                 ),
-
-                # Destination eventuelle des donnees corrigees
                 DfWriter(
-                    DQ_REM_DIR / "consommation1_heterogeneite_rem.parquet",
+                    DATA_DIR / f"consommation1{SEPARATOR}consommation2.parquet",
                     FileType.PARQUET,
                 ),
-
-                # Colonne a examiner
                 "NB_KW_Jour",
-
-                # Aucun facteur de conversion valide pour l'instant
                 [],
-
-                # Seuil de proximite provisoire
                 0.05,
             ),
         ],
-
-        # ====================================================
-        # PARTIE B : RATIO DE POSITION
-        # ====================================================
-
         cfg_ratio=[
             (
-                # Source des salaires
                 DfReader(
                     DATA_DIR / "csp3.parquet",
                     FileType.PARQUET,
                 ),
-
-                # Destination eventuelle des donnees corrigees
                 DfWriter(
-                    DQ_REM_DIR / "csp3_heterogeneite_rem.parquet",
+                    DATA_DIR / "csp3.parquet",
                     FileType.PARQUET,
                 ),
-
-                # Colonne a examiner
                 "Salaire_Max",
-
-                # Facteur neutre pour tester le passage dans Airflow
-                # Multiplier ou diviser par 1 ne change pas les valeurs
                 [1.0],
-
-                # Seuil : au moins 50 % des lignes atypiques
-                # doivent etre ameliorables
                 0.5,
             ),
         ],
-
-        # ====================================================
-        # SECURITE : MODE SIMULATION
-        # ====================================================
-
-        # Aucune ecriture de fichiers n'est autorisee
-        autoriser_ecriture=False,
+        autoriser_ecriture=True,
     )
 
-    # ========================================================
-    # 3. ENCHAINEMENT DES TACHES
-    # ========================================================
-
-    start >> task_unicite >> task_completude >> end
-    start >> task_heterogeneite >> end
+    # Task Chaining
+    start >> task_heterogeneite >> task_unicite >> task_completude >> end
 
 
 dag_instance = data_quality_remediation()
