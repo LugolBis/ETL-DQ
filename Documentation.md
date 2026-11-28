@@ -217,7 +217,7 @@ Métriques :
 
   + Formalisme:\
     Soit $R$ la relation tel que $|R| = N$, $C$ l'ensemble des attributs de $R$, tel qu'on a $x, y, z \in C^3$ avec $x \neq y \neq z$.\
-    $\phi(x, y, z) = 1 - \frac{1}{N} \sum_{t \in R} 1[\neg (t[x] <= t[y] <= t[z])]$
+    $\phi_{VI}(x, y, z) = 1 - \frac{1}{N} \sum_{t \in R} 1[\neg (t[x] <= t[y] <= t[z])]$
 
 - Validité des formats extra sources :
   + Concept :\
@@ -666,7 +666,7 @@ $$U = \biguplus_{m \in \mathcal{M}} \rho_m(T_m)$$
 | $uniq$ | `unicite` | Unicité, Absence de doublons | `source` | `column_name` | $\phi_{uniq}$ |
 | $fmt$ | `conformite_fmt` | Conformité, Format | `source` | `column_name` | $\phi_p$ |
 | $lab$ | `conformite_label` | Conformité, Valeurs autorisées | `source` | `column_name` | $\phi_L$ |
-| $int$ | `conformite_interval` | Conformité, Intervalle | `source` | $x \leq y \leq z$ | $\phi(x,y,z)$ |
+| $int$ | `conformite_interval` | Conformité, Intervalle | `source` | $x \leq y \leq z$ | $\phi_{VI}$ |
 | $fk$ | `conformite_fk` | Conformité, Clé étrangère | $R_1 \to R_2$ | $c_1 \to c_2$ | $\Phi_{fk}$ |
 | $disp$ | `heterogeneite_dispersion` | Hétérogénéité, Dispersion entre sources | $R_1$ vs $R_2$ | $c_1$ | $\phi_{d_{CV}}$ |
 | $RP$ | `heterogeneite_ratio` | Hétérogénéité, Position de la moyenne | `source` | $x / y / z$ | $\phi_{RP}$ |
