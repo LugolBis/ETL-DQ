@@ -74,10 +74,15 @@ def data_quality_remediation():
 
     # ========================================================
     # 2. REMEDIATION DE L'HETEROGENEITE
-    # Ta contribution
+    # Dispersion + ratio de position
     # ========================================================
 
     task_heterogeneite = heterogeneite_remediation(
+
+        # ====================================================
+        # PARTIE A : DIFFERENCE DE DISPERSION
+        # ====================================================
+
         cfg_dispersion=[
             (
                 # Source 1 : consommation Paris
@@ -98,7 +103,7 @@ def data_quality_remediation():
                     FileType.PARQUET,
                 ),
 
-                # Colonne a corriger
+                # Colonne a examiner
                 "NB_KW_Jour",
 
                 # Aucun facteur de conversion valide pour l'instant
@@ -109,10 +114,42 @@ def data_quality_remediation():
             ),
         ],
 
-        # Partie salaires csp3 non activee pour l'instant
-        cfg_ratio=[],
+        # ====================================================
+        # PARTIE B : RATIO DE POSITION
+        # ====================================================
 
-        # Mode simulation : aucune ecriture
+        cfg_ratio=[
+            (
+                # Source des salaires
+                DfReader(
+                    DATA_DIR / "csp3.parquet",
+                    FileType.PARQUET,
+                ),
+
+                # Destination eventuelle des donnees corrigees
+                DfWriter(
+                    DQ_REM_DIR / "csp3_heterogeneite_rem.parquet",
+                    FileType.PARQUET,
+                ),
+
+                # Colonne a examiner
+                "Salaire_Max",
+
+                # Facteur neutre pour tester le passage dans Airflow
+                # Multiplier ou diviser par 1 ne change pas les valeurs
+                [1.0],
+
+                # Seuil : au moins 50 % des lignes atypiques
+                # doivent etre ameliorables
+                0.5,
+            ),
+        ],
+
+        # ====================================================
+        # SECURITE : MODE SIMULATION
+        # ====================================================
+
+        # Aucune ecriture de fichiers n'est autorisee
         autoriser_ecriture=False,
     )
 
