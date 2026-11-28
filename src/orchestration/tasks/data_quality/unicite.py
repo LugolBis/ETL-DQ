@@ -6,6 +6,7 @@ from airflow.sdk import task
 
 from metrics.unicite import compute_unicite
 from orchestration.tasks.enums import FileType
+from orchestration.tasks.load.helpers import lazy_union_dyn
 from orchestration.tasks.models import DfReader, DfWriter
 
 
@@ -23,15 +24,13 @@ def unicite_assessment(
     for names, columns in cfg:
         source = "+".join(names)
 
+        sources = [
+            DfReader(data_dir / f"{name}.parquet", FileType.PARQUET, columns=columns)
+            for name in names
+        ]
+
         df_rids, df_metric = compute_unicite(
-            pl.concat(
-                [
-                    DfReader(
-                        data_dir / f"{name}.parquet", FileType.PARQUET, columns=columns
-                    ).read()
-                    for name in names
-                ],
-            ),
+            pl.concat([df_r.read() for df_r in lazy_union_dyn(sources, data_dir)]),
             columns,
             source,
             timestamp_dt,
